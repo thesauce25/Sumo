@@ -93,7 +93,17 @@ export default function ControllerPage() {
                         ))}
                     </select>
                     {w1 && (
-                        <div className="mt-2 flex gap-3 items-center">
+                        <div className="mt-2 flex gap-3 items-center relative">
+                            {/* KIAI OVERLAY */}
+                            {buttonText === "NOKOTTA..." && (
+                                <button
+                                    onClick={() => api.fightAction(w1.id, 'kiai')}
+                                    className="absolute inset-0 z-10 bg-red-600/80 hover:bg-red-500 text-white font-[family-name:var(--font-dotgothic)] text-2xl animate-pulse border-2 border-yellow-400 flex items-center justify-center uppercase shadow-lg"
+                                >
+                                    KIAI!
+                                </button>
+                            )}
+
                             <div className="bg-[#1a1428] p-1.5 border-2 border-[#3d2d5c]">
                                 <PixelSumo seed={w1.avatar_seed} color={w1.color} size={44} />
                             </div>
@@ -113,10 +123,10 @@ export default function ControllerPage() {
                     )}
                 </div>
 
-                {/* VS Badge - Compact */}
-                <div className="flex justify-center py-1">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-b from-[#CD853F] to-[#8B4513] flex items-center justify-center border-2 border-[#DEB887]">
-                        <span className="font-[family-name:var(--font-dotgothic)] text-sm text-white [text-shadow:_1px_1px_0_#000]">対</span>
+                {/* VS Badge - Minimal */}
+                <div className="flex justify-center py-0.5">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-b from-[#CD853F] to-[#8B4513] flex items-center justify-center border-2 border-[#DEB887]">
+                        <span className="font-[family-name:var(--font-dotgothic)] text-xs text-white [text-shadow:_1px_1px_0_#000]">対</span>
                     </div>
                 </div>
 
@@ -136,7 +146,17 @@ export default function ControllerPage() {
                         ))}
                     </select>
                     {w2 && (
-                        <div className="mt-2 flex gap-3 items-center">
+                        <div className="mt-2 flex gap-3 items-center relative">
+                            {/* KIAI OVERLAY */}
+                            {buttonText === "NOKOTTA..." && (
+                                <button
+                                    onClick={() => api.fightAction(w2.id, 'kiai')}
+                                    className="absolute inset-0 z-10 bg-blue-600/80 hover:bg-blue-500 text-white font-[family-name:var(--font-dotgothic)] text-2xl animate-pulse border-2 border-yellow-400 flex items-center justify-center uppercase shadow-lg"
+                                >
+                                    KIAI!
+                                </button>
+                            )}
+
                             <div className="bg-[#1a1428] p-1.5 border-2 border-[#3d2d5c]">
                                 <PixelSumo seed={w2.avatar_seed} color={w2.color} size={44} />
                             </div>
@@ -157,11 +177,11 @@ export default function ControllerPage() {
                 </div>
             </div>
 
-            {/* Fight Button - Fixed at bottom */}
+            {/* Fight Button - PROMINENT */}
             <Button
                 onClick={handleFight}
                 disabled={loading || !p1 || !p2 || buttonText === "NOKOTTA..."}
-                className="w-full h-12 text-lg font-[family-name:var(--font-dotgothic)] tracking-widest mt-2 bg-gradient-to-b from-[#FFD700] to-[#DAA520] text-black border-3 border-t-[#FFF8DC] border-l-[#FFF8DC] border-b-[#8B6914] border-r-[#8B6914] shadow-[0_3px_0_#5D4E0A] active:shadow-none active:translate-y-[2px] disabled:opacity-50"
+                className="w-full h-16 text-xl font-[family-name:var(--font-dotgothic)] tracking-widest mt-3 bg-gradient-to-b from-[#FFD700] to-[#DAA520] text-black border-4 border-t-[#FFF8DC] border-l-[#FFF8DC] border-b-[#8B6914] border-r-[#8B6914] shadow-[0_4px_0_#5D4E0A] active:shadow-none active:translate-y-[3px] disabled:opacity-50 animate-pulse"
             >
                 {buttonText}
             </Button>

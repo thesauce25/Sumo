@@ -8,6 +8,7 @@ import { ArrowLeft, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PixelSumo } from "@/components/PixelSumo";
+import { SkillTree } from "@/components/SkillTree";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -23,12 +24,17 @@ export default function WrestlerView({ id }: { id: number }) {
     const [wrestler, setWrestler] = useState<Wrestler | null>(null);
     const [history, setHistory] = useState<MatchRecord[]>([]);
     const [showAlert, setShowAlert] = useState(false);
+    const [showSkillTree, setShowSkillTree] = useState(false);
     const router = useRouter();
 
-    useEffect(() => {
+    const refresh = () => {
         if (isNaN(id)) return;
         api.getWrestler(id).then(setWrestler).catch(() => router.push("/profiles"));
         api.getHistory(id).then(setHistory);
+    };
+
+    useEffect(() => {
+        refresh();
     }, [id, router]);
 
     const confirmDelete = async () => {
@@ -133,6 +139,20 @@ export default function WrestlerView({ id }: { id: number }) {
                     </div>
                 </Card>
 
+                {/* KEIKO Training Button */}
+                <button
+                    onClick={() => setShowSkillTree(true)}
+                    className="w-full gba-btn font-[family-name:var(--font-dotgothic)] text-sm py-3 mb-4 flex items-center justify-center gap-3"
+                >
+                    <span className="text-lg">稽古</span>
+                    <span>KEIKO (TRAINING)</span>
+                    {(wrestler.skill_points ?? 0) > 0 && (
+                        <span className="bg-[var(--jade)] text-black px-2 py-0.5 text-xs">
+                            {wrestler.skill_points} SP
+                        </span>
+                    )}
+                </button>
+
                 {/* Match History - Scrollable */}
                 <div className="flex-1 overflow-y-auto">
                     <h3 className="font-[family-name:var(--font-dotgothic)] text-xs text-muted-foreground mb-2">BASHO RECORD</h3>
@@ -163,6 +183,18 @@ export default function WrestlerView({ id }: { id: number }) {
                     </div>
                 </div>
             </div>
+
+            {/* Skill Tree Modal */}
+            {showSkillTree && (
+                <SkillTree
+                    wrestlerId={id}
+                    wrestlerName={wrestler.custom_name || wrestler.name}
+                    onClose={() => {
+                        setShowSkillTree(false);
+                        refresh();
+                    }}
+                />
+            )}
 
             <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
                 <AlertDialogContent className="gba-panel border-2 text-foreground">

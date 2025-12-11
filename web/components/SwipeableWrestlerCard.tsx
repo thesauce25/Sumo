@@ -72,9 +72,12 @@ export function SwipeableWrestlerCard({ wrestler, onDelete }: Props) {
                     animate={controls}
                     style={{ x, zIndex: 10, position: 'relative' }}
                 >
-                    <div onClick={(e) => { if (isDragging) e.preventDefault(); }}>
-                        <Link href={`/profiles/${wrestler.id}`} onClick={(e) => { if (x.get() < -10) e.preventDefault(); }}>
-                            <Card className="gba-panel overflow-hidden">
+                    <div className="relative">
+                        <Link href={`/profiles/${wrestler.id}`} className="block" onClick={(e) => {
+                            // Only prevent navigation if we've dragged significantly to reveal delete
+                            if (x.get() < -10) e.preventDefault();
+                        }}>
+                            <Card className="gba-panel overflow-hidden active:scale-95 transition-transform">
                                 <div className="flex h-full py-3 px-4 items-center gap-3">
                                     <div className="bg-black/30 p-1 border border-[var(--border)]">
                                         <PixelSumo seed={wrestler.avatar_seed} color={wrestler.color} size={40} className="shrink-0" />
@@ -85,13 +88,34 @@ export function SwipeableWrestlerCard({ wrestler, onDelete }: Props) {
                                                 <h3 className="font-[family-name:var(--font-dotgothic)] text-sm leading-none truncate" style={{ color: `rgb(${wrestler.color})` }}>
                                                     {wrestler.custom_name ? wrestler.custom_name.toUpperCase() : wrestler.name.toUpperCase()}
                                                 </h3>
-                                                <div className="text-[10px] text-muted-foreground mt-1">
-                                                    {wrestler.stable}-BEYA
+                                                <div className="flex gap-2 items-center text-[10px] text-muted-foreground mt-1">
+                                                    <span>{wrestler.stable}-BEYA</span>
+                                                    {wrestler.rank_name && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <span className="text-[var(--gold)]">{wrestler.rank_name.toUpperCase()}</span>
+                                                        </>
+                                                    )}
                                                 </div>
+                                                {wrestler.fighting_style && (
+                                                    <div className="text-[9px] text-purple-400 font-[family-name:var(--font-dotgothic)] mt-0.5">
+                                                        {wrestler.fighting_style.replace(/_/g, ' ').toUpperCase()}
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div className="text-right shrink-0 ml-2">
-                                                <div className="font-[family-name:var(--font-dotgothic)] text-lg leading-none text-[var(--gold)]">{wrestler.wins}</div>
-                                                <div className="text-[8px] text-muted-foreground tracking-wider">勝</div>
+                                            <div className="flex gap-3 shrink-0 ml-2">
+                                                {/* Skill Points Badge */}
+                                                {(wrestler.skill_points ?? 0) > 0 && (
+                                                    <div className="text-center">
+                                                        <div className="font-[family-name:var(--font-dotgothic)] text-sm leading-none text-[var(--jade)]">{wrestler.skill_points}</div>
+                                                        <div className="text-[8px] text-muted-foreground tracking-wider">SP</div>
+                                                    </div>
+                                                )}
+                                                {/* Wins Counter */}
+                                                <div className="text-right">
+                                                    <div className="font-[family-name:var(--font-dotgothic)] text-lg leading-none text-[var(--gold)]">{wrestler.wins}</div>
+                                                    <div className="text-[8px] text-muted-foreground tracking-wider">勝</div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

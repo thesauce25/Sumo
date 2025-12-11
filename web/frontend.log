@@ -241,3 +241,240 @@ Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allow
  GET /profiles 200 in 19ms (compile: 6ms, render: 13ms)
  GET / 200 in 18ms (compile: 5ms, render: 13ms)
  GET /controller 200 in 16ms (compile: 4ms, render: 12ms)
+ ✓ Compiled in 39ms
+ ✓ Compiled in 28ms
+ GET / 200 in 23ms (compile: 6ms, render: 17ms)
+ ✓ Compiled in 28ms
+ GET / 200 in 45ms (compile: 10ms, render: 34ms)
+ GET /profiles 200 in 101ms (compile: 82ms, render: 19ms)
+ GET /profiles/3 200 in 82ms (compile: 71ms, render: 11ms)
+ GET /profiles/3 200 in 100ms (compile: 11ms, render: 89ms)
+ GET /profiles/3 200 in 24ms (compile: 3ms, render: 21ms)
+ GET / 200 in 40ms (compile: 8ms, render: 32ms)
+ GET / 200 in 23ms (compile: 1399µs, render: 22ms)
+ GET /profiles 200 in 13ms (compile: 4ms, render: 9ms)
+ GET /profiles/3 200 in 14ms (compile: 5ms, render: 8ms)
+ GET / 200 in 161ms (compile: 61ms, render: 101ms)
+ GET / 200 in 8ms (compile: 962µs, render: 7ms)
+ GET / 200 in 9ms (compile: 962µs, render: 8ms)
+ GET / 200 in 9ms (compile: 1434µs, render: 8ms)
+ GET /profiles/3 200 in 120ms (compile: 39ms, render: 81ms)
+ GET /profiles/3 200 in 21ms (compile: 4ms, render: 18ms)
+ GET / 200 in 125ms (compile: 6ms, render: 118ms)
+ GET /profiles 200 in 54ms (compile: 44ms, render: 11ms)
+ GET /profiles/3 200 in 14ms (compile: 4ms, render: 10ms)
+ GET /profiles/3 200 in 49ms (compile: 12ms, render: 36ms)
+ ✓ Compiled in 48ms
+ GET /profiles/3 200 in 91ms (compile: 46ms, render: 45ms)
+ GET /profiles 200 in 30ms (compile: 10ms, render: 21ms)
+ GET / 200 in 13ms (compile: 4ms, render: 10ms)
+ GET /controller 200 in 48ms (compile: 41ms, render: 7ms)
+ ⨯ ReferenceError: dotGothic is not defined
+    at RootLayout (app/layout.tsx:28:70)
+  26 |   return (
+  27 |     <html lang="en" className="dark" suppressHydrationWarning>
+> 28 |       <body suppressHydrationWarning className={`${inter.variable} ${dotGothic.variable} antialiased min-h-[100dvh] overflow-x-hidden selection:bg-[var(--gold)] selection:text-black`}>
+     |                                                                      ^
+  29 |         {/* LCD Scanline Overlay - subtle GBA effect */}
+  30 |         <div className="fixed inset-0 pointer-events-none z-50 lcd-overlay opacity-15" aria-hidden="true" />
+  31 | {
+  digest: '3563974102'
+}
+ ⨯ ReferenceError: dotGothic is not defined
+    at RootLayout (app/layout.tsx:28:70)
+  26 |   return (
+  27 |     <html lang="en" className="dark" suppressHydrationWarning>
+> 28 |       <body suppressHydrationWarning className={`${inter.variable} ${dotGothic.variable} antialiased min-h-[100dvh] overflow-x-hidden selection:bg-[var(--gold)] selection:text-black`}>
+     |                                                                      ^
+  29 |         {/* LCD Scanline Overlay - subtle GBA effect */}
+  30 |         <div className="fixed inset-0 pointer-events-none z-50 lcd-overlay opacity-15" aria-hidden="true" />
+  31 | {
+  digest: '3563974102'
+}
+ ⨯ ReferenceError: dotGothic is not defined
+    at RootLayout (app/layout.tsx:28:70)
+  26 |   return (
+  27 |     <html lang="en" className="dark" suppressHydrationWarning>
+> 28 |       <body suppressHydrationWarning className={`${inter.variable} ${dotGothic.variable} antialiased min-h-[100dvh] overflow-x-hidden selection:bg-[var(--gold)] selection:text-black`}>
+     |                                                                      ^
+  29 |         {/* LCD Scanline Overlay - subtle GBA effect */}
+  30 |         <div className="fixed inset-0 pointer-events-none z-50 lcd-overlay opacity-15" aria-hidden="true" />
+  31 | {
+  digest: '3563974102'
+}
+ ⨯ ReferenceError: dotGothic is not defined
+    at RootLayout (app/layout.tsx:28:70)
+  26 |   return (
+  27 |     <html lang="en" className="dark" suppressHydrationWarning>
+> 28 |       <body suppressHydrationWarning className={`${inter.variable} ${dotGothic.variable} antialiased min-h-[100dvh] overflow-x-hidden selection:bg-[var(--gold)] selection:text-black`}>
+     |                                                                      ^
+  29 |         {/* LCD Scanline Overlay - subtle GBA effect */}
+  30 |         <div className="fixed inset-0 pointer-events-none z-50 lcd-overlay opacity-15" aria-hidden="true" />
+  31 | {
+  digest: '3563974102'
+}
+ GET /profiles/3 500 in 198ms (compile: 3ms, render: 195ms)
+ ⨯ ReferenceError: dotGothic is not defined
+    at RootLayout (app/layout.tsx:28:70)
+  26 |   return (
+  27 |     <html lang="en" className="dark" suppressHydrationWarning>
+> 28 |       <body suppressHydrationWarning className={`${inter.variable} ${dotGothic.variable} antialiased min-h-[100dvh] overflow-x-hidden selection:bg-[var(--gold)] selection:text-black`}>
+     |                                                                      ^
+  29 |         {/* LCD Scanline Overlay - subtle GBA effect */}
+  30 |         <div className="fixed inset-0 pointer-events-none z-50 lcd-overlay opacity-15" aria-hidden="true" />
+  31 | {
+  digest: '3563974102'
+}
+ GET /profiles/3 200 in 374ms (compile: 89ms, render: 285ms)
+ ⨯ ReferenceError: dotGothic is not defined
+    at RootLayout (app/layout.tsx:28:70)
+  26 |   return (
+  27 |     <html lang="en" className="dark" suppressHydrationWarning>
+> 28 |       <body suppressHydrationWarning className={`${inter.variable} ${dotGothic.variable} antialiased min-h-[100dvh] overflow-x-hidden selection:bg-[var(--gold)] selection:text-black`}>
+     |                                                                      ^
+  29 |         {/* LCD Scanline Overlay - subtle GBA effect */}
+  30 |         <div className="fixed inset-0 pointer-events-none z-50 lcd-overlay opacity-15" aria-hidden="true" />
+  31 | {
+  digest: '3563974102'
+}
+ ✓ Compiled in 0ms
+ GET / 200 in 466ms (compile: 235ms, render: 231ms)
+ GET /profiles/3 500 in 171ms (compile: 9ms, render: 162ms)
+ GET / 500 in 202ms (compile: 2ms, render: 200ms)
+ GET /profiles/3 200 in 326ms (compile: 75ms, render: 252ms)
+ GET / 200 in 591ms (compile: 108ms, render: 483ms)
+ ✓ Compiled in 53ms
+ ✓ Compiled in 24ms
+ GET /controller 200 in 163ms (compile: 87ms, render: 76ms)
+ GET / 200 in 18ms (compile: 6ms, render: 13ms)
+ GET /profiles 200 in 79ms (compile: 64ms, render: 15ms)
+ GET / 200 in 13ms (compile: 2ms, render: 10ms)
+ GET /controller 200 in 11ms (compile: 4ms, render: 7ms)
+ GET / 200 in 11ms (compile: 1889µs, render: 9ms)
+ GET / 200 in 10ms (compile: 1334µs, render: 9ms)
+ GET / 200 in 19ms (compile: 1170µs, render: 18ms)
+ GET /controller 200 in 8ms (compile: 3ms, render: 5ms)
+ GET / 200 in 15ms (compile: 7ms, render: 8ms)
+ GET /profiles 200 in 16ms (compile: 6ms, render: 10ms)
+ GET / 200 in 14ms (compile: 1799µs, render: 12ms)
+ GET /controller 200 in 14ms (compile: 4ms, render: 10ms)
+ GET /controller 200 in 45ms (compile: 3ms, render: 41ms)
+ GET / 200 in 15ms (compile: 3ms, render: 12ms)
+ GET / 200 in 16ms (compile: 5ms, render: 11ms)
+ GET /profiles 200 in 24ms (compile: 5ms, render: 19ms)
+ GET /profiles 200 in 13ms (compile: 2ms, render: 11ms)
+ GET /profiles/4 200 in 72ms (compile: 61ms, render: 12ms)
+ GET /profiles/3 200 in 18ms (compile: 4ms, render: 14ms)
+ GET /profiles 200 in 18ms (compile: 5ms, render: 14ms)
+ GET /profiles/4 200 in 17ms (compile: 6ms, render: 11ms)
+ GET /profiles 200 in 15ms (compile: 3ms, render: 13ms)
+ GET /profiles/3 200 in 16ms (compile: 4ms, render: 12ms)
+ GET /profiles 200 in 7ms (compile: 1344µs, render: 6ms)
+ GET /profiles/3 200 in 19ms (compile: 5ms, render: 13ms)
+ GET /profiles 200 in 24ms (compile: 8ms, render: 16ms)
+ GET /profiles/3 200 in 19ms (compile: 6ms, render: 13ms)
+ GET /profiles 200 in 18ms (compile: 4ms, render: 13ms)
+ GET / 200 in 27ms (compile: 7ms, render: 20ms)
+ GET /profiles 200 in 15ms (compile: 3ms, render: 12ms)
+ GET / 200 in 19ms (compile: 3ms, render: 16ms)
+ GET /profiles 200 in 13ms (compile: 3ms, render: 10ms)
+ GET / 200 in 18ms (compile: 3ms, render: 15ms)
+ GET /controller 200 in 15ms (compile: 4ms, render: 11ms)
+ GET /controller 200 in 30ms (compile: 5ms, render: 25ms)
+ GET / 200 in 19ms (compile: 5ms, render: 14ms)
+ GET /controller 200 in 15ms (compile: 1716µs, render: 13ms)
+ GET /controller 200 in 16ms (compile: 4ms, render: 12ms)
+ GET / 200 in 20ms (compile: 5ms, render: 15ms)
+ GET /controller 200 in 13ms (compile: 3ms, render: 10ms)
+ GET / 200 in 9ms (compile: 1678µs, render: 7ms)
+ GET /profiles 200 in 14ms (compile: 5ms, render: 9ms)
+ GET /profiles/4 200 in 16ms (compile: 5ms, render: 11ms)
+ GET / 200 in 11ms (compile: 3ms, render: 7ms)
+ GET /profiles 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /profiles 200 in 30ms (compile: 8ms, render: 21ms)
+ GET /profiles/3 200 in 9ms (compile: 3ms, render: 6ms)
+ GET / 200 in 17ms (compile: 2ms, render: 15ms)
+ GET /controller 200 in 15ms (compile: 3ms, render: 12ms)
+ GET / 200 in 20ms (compile: 5ms, render: 16ms)
+ GET /profiles 200 in 15ms (compile: 4ms, render: 10ms)
+ GET /profiles/4 200 in 17ms (compile: 6ms, render: 11ms)
+ GET /profiles 200 in 9ms (compile: 3ms, render: 5ms)
+ GET / 200 in 18ms (compile: 5ms, render: 14ms)
+ GET /controller 200 in 7ms (compile: 1811µs, render: 6ms)
+ GET /profiles 200 in 9ms (compile: 4ms, render: 6ms)
+ GET / 200 in 9ms (compile: 1732µs, render: 7ms)
+ GET / 200 in 8ms (compile: 1137µs, render: 7ms)
+ GET /controller 200 in 15ms (compile: 3ms, render: 12ms)
+ GET / 200 in 11ms (compile: 1247µs, render: 9ms)
+ GET /profiles 200 in 16ms (compile: 3ms, render: 13ms)
+ GET /profiles 200 in 9ms (compile: 1666µs, render: 7ms)
+ GET /profiles/4 200 in 17ms (compile: 8ms, render: 9ms)
+ GET /profiles/4 200 in 8ms (compile: 2ms, render: 6ms)
+ GET /profiles 200 in 9ms (compile: 1906µs, render: 8ms)
+ GET /profiles/3 200 in 14ms (compile: 4ms, render: 10ms)
+ GET /profiles 200 in 15ms (compile: 5ms, render: 11ms)
+ GET /profiles 200 in 13ms (compile: 3ms, render: 10ms)
+ GET /profiles/4 200 in 14ms (compile: 5ms, render: 9ms)
+ GET /profiles/4 200 in 20ms (compile: 5ms, render: 15ms)
+ GET /profiles 200 in 15ms (compile: 3ms, render: 12ms)
+ GET / 200 in 23ms (compile: 5ms, render: 18ms)
+ GET /profiles 200 in 13ms (compile: 3ms, render: 10ms)
+ GET / 200 in 16ms (compile: 2ms, render: 14ms)
+ GET /controller 200 in 13ms (compile: 4ms, render: 9ms)
+ GET / 200 in 16ms (compile: 2ms, render: 14ms)
+ GET /profiles 200 in 14ms (compile: 3ms, render: 11ms)
+ GET / 200 in 12ms (compile: 1542µs, render: 11ms)
+ GET /controller 200 in 17ms (compile: 5ms, render: 12ms)
+ GET / 200 in 17ms (compile: 5ms, render: 12ms)
+ GET /profiles 200 in 15ms (compile: 3ms, render: 12ms)
+ GET /profiles/4 200 in 20ms (compile: 7ms, render: 12ms)
+ GET /profiles 200 in 17ms (compile: 5ms, render: 12ms)
+ GET /profiles/3 200 in 20ms (compile: 7ms, render: 12ms)
+ GET /profiles/4 200 in 67ms (compile: 5ms, render: 62ms)
+ GET /profiles 200 in 12ms (compile: 4ms, render: 8ms)
+ GET /profiles 200 in 8ms (compile: 1620µs, render: 7ms)
+ GET / 200 in 20ms (compile: 4ms, render: 16ms)
+ GET /controller 200 in 16ms (compile: 5ms, render: 11ms)
+ GET / 200 in 14ms (compile: 2ms, render: 12ms)
+ GET /controller 200 in 7ms (compile: 1748µs, render: 5ms)
+ GET / 200 in 17ms (compile: 3ms, render: 13ms)
+ GET /profiles 200 in 18ms (compile: 5ms, render: 13ms)
+ GET /profiles/3 200 in 19ms (compile: 6ms, render: 12ms)
+ GET / 200 in 20ms (compile: 6ms, render: 15ms)
+ GET /profiles 200 in 16ms (compile: 4ms, render: 13ms)
+ GET /profiles/3 200 in 13ms (compile: 4ms, render: 9ms)
+ GET /profiles 200 in 8ms (compile: 1908µs, render: 6ms)
+ GET /profiles/4 200 in 33ms (compile: 6ms, render: 27ms)
+ GET /profiles 200 in 16ms (compile: 3ms, render: 12ms)
+ GET /profiles 200 in 10ms (compile: 2ms, render: 8ms)
+ GET / 200 in 22ms (compile: 5ms, render: 18ms)
+ GET /controller 200 in 11ms (compile: 3ms, render: 8ms)
+ GET / 200 in 19ms (compile: 3ms, render: 15ms)
+ GET /controller 200 in 7ms (compile: 2ms, render: 5ms)
+ GET / 200 in 17ms (compile: 3ms, render: 14ms)
+ GET /profiles 200 in 17ms (compile: 5ms, render: 12ms)
+ GET /profiles/4 200 in 20ms (compile: 8ms, render: 12ms)
+ GET /profiles 200 in 13ms (compile: 3ms, render: 10ms)
+ GET / 200 in 18ms (compile: 4ms, render: 15ms)
+ GET /controller 200 in 16ms (compile: 3ms, render: 13ms)
+ GET / 200 in 9ms (compile: 1204µs, render: 8ms)
+ GET /profiles 200 in 14ms (compile: 3ms, render: 11ms)
+ GET /profiles/4 200 in 15ms (compile: 5ms, render: 10ms)
+ GET / 200 in 17ms (compile: 2ms, render: 15ms)
+ GET /profiles 200 in 12ms (compile: 3ms, render: 9ms)
+ GET /profiles/3 200 in 16ms (compile: 4ms, render: 12ms)
+ GET /profiles 200 in 8ms (compile: 1930µs, render: 6ms)
+ GET / 200 in 17ms (compile: 1100µs, render: 16ms)
+ GET /controller 200 in 8ms (compile: 3ms, render: 6ms)
+ GET / 200 in 11ms (compile: 3ms, render: 8ms)
+ GET /controller 200 in 15ms (compile: 4ms, render: 11ms)
+ GET / 200 in 18ms (compile: 2ms, render: 16ms)
+ GET /profiles 200 in 17ms (compile: 5ms, render: 12ms)
+ GET /profiles/4 200 in 21ms (compile: 6ms, render: 15ms)
+ GET /profiles 200 in 9ms (compile: 2ms, render: 7ms)
+ GET /profiles 200 in 6ms (compile: 1282µs, render: 5ms)
+ GET / 200 in 10ms (compile: 2ms, render: 8ms)
+ GET /controller 200 in 9ms (compile: 4ms, render: 5ms)
+ GET / 200 in 14ms (compile: 4ms, render: 10ms)
+ GET /controller 200 in 59ms (compile: 1882µs, render: 57ms)
+ GET / 200 in 51ms (compile: 8ms, render: 44ms)

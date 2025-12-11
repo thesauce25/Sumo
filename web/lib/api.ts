@@ -21,6 +21,40 @@ export interface Wrestler {
     color: string;
     bio?: string;
     avatar_seed?: number;
+    skill_points?: number;
+    // Progression
+    xp?: number;
+    year?: number;
+    rank_index?: number;
+    rank_name?: string;
+    rank_jp?: string;
+    win_streak?: number;
+    fighting_style?: string;
+    milestones?: string[];
+}
+
+export interface Skill {
+    id: string;
+    name: string;
+    jp: string;
+    desc: string;
+    tier: number;
+    cost: number;
+    effect: Record<string, number>;
+}
+
+export interface SkillBranch {
+    name: string;
+    jp: string;
+    description: string;
+    color: string;
+    skills: Skill[];
+}
+
+export interface WrestlerSkillsResponse {
+    skill_points: number;
+    unlocked_skills: Array<Skill & { unlocked_at: string }>;
+    total_bonuses: Record<string, number>;
 }
 
 export interface MatchRecord {
@@ -77,6 +111,41 @@ export const api = {
         const url = wrestlerId ? `${getApiUrl()}/history?wrestler_id=${wrestlerId}` : `${getApiUrl()}/history`;
         const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to fetch history');
+        return res.json();
+    },
+
+    // Skill Tree API
+    getSkillTree: async (): Promise<Record<string, SkillBranch>> => {
+        const res = await fetch(`${getApiUrl()}/skills`, { cache: 'no-store' });
+        if (!res.ok) throw new Error('Failed to fetch skill tree');
+        return res.json();
+    },
+
+    getWrestlerSkills: async (wrestlerId: number): Promise<WrestlerSkillsResponse> => {
+        const res = await fetch(`${getApiUrl()}/wrestlers/${wrestlerId}/skills`, { cache: 'no-store' });
+        if (!res.ok) throw new Error('Failed to fetch wrestler skills');
+        return res.json();
+    },
+
+    unlockSkill: async (wrestlerId: number, skillId: string): Promise<{ success: boolean; skill_id: string; cost: number }> => {
+        const res = await fetch(`${getApiUrl()}/wrestlers/${wrestlerId}/skills/${skillId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (!res.ok) {
+            const error = await res.json();
+            throw new Error(error.error || 'Failed to unlock skill');
+        }
+        return res.json();
+    },
+
+    fightAction: async (wrestlerId: number, action: 'kiai') => {
+        const res = await fetch(`${getApiUrl()}/fight/action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ wrestler_id: wrestlerId, action })
+        });
+        if (!res.ok) throw new Error('Failed to perform action');
         return res.json();
     }
 };
