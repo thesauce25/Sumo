@@ -47,11 +47,16 @@ export default function ProfilesPage() {
 
     const handleCreate = async () => {
         setLoading(true);
-        await api.createWrestler(newName || undefined, newColor);
-        setLoading(false);
-        setOpen(false);
-        setNewName("");
-        refresh();
+        try {
+            await api.createWrestler(newName || undefined, newColor);
+            setOpen(false);
+            setNewName("");
+            refresh();
+        } catch (e) {
+            alert("Failed to register wrestler. Ensure backend is running.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleDelete = async (id: number) => {

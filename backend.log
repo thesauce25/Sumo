@@ -1,4 +1,4 @@
-[2025-12-10 20:53:27] [RGBME] [ERROR]: 
+[2025-12-10 21:12:56] [RGBME] [ERROR]: 
 Failed to load SixelAdapter for "sixel" display adapter!
 
 If this is not your configured display adapter, the emulator will continue to load.
@@ -8,7 +8,7 @@ You can suppress this error in the `emulator_config.json` by adding:
   "suppress_adapter_load_errors": true
 
 Traceback (most recent call last):
-  File "/Users/mattsaucedo/Documents/Sumo/sumo_game.py", line 254, in <module>
+  File "/Users/mattsaucedo/Documents/Sumo/sumo_game.py", line 292, in <module>
     from rgbmatrix import RGBMatrix, RGBMatrixOptions, graphics
 ModuleNotFoundError: No module named 'rgbmatrix'
 
@@ -30,13 +30,22 @@ Traceback (most recent call last):
   File "/Users/mattsaucedo/Library/Python/3.9/lib/python/site-packages/libsixel/__init__.py", line 352, in <module>
     raise ImportError("libsixel not found.")
 ImportError: libsixel not found.
-[2025-12-10 20:53:27] [RGBME] [INFO]: RGBME v0.14.1 - 64x32 Matrix | 1x1 Chain | 16px per LED (SQUARE) | BrowserAdapter
-[2025-12-10 20:53:27] [RGBME] [INFO]: Starting server...
-[2025-12-10 20:53:27] [RGBME] [INFO]: Server started and ready to accept requests on http://localhost:8888/
-Migrating DB: Adding is_active column...
+[2025-12-10 21:12:56] [RGBME] [INFO]: RGBME v0.14.1 - 64x32 Matrix | 1x1 Chain | 16px per LED (SQUARE) | BrowserAdapter
+[2025-12-10 21:12:56] [RGBME] [INFO]: Starting server...
+[2025-12-10 21:12:56] [RGBME] [INFO]: Server started and ready to accept requests on http://localhost:8888/
 Hardware library NOT found. Falling back to RGBMatrixEmulator...
 Sumo Smash Started! Press Ctrl+C to exit.
 Mobile Remote running at: http://<YOUR_IP>:5001
  * Serving Flask app 'sumo_game'
  * Debug mode: off
-[2025-12-10 20:53:31] [RGBME] [INFO]: WebSocket opened from: ::1
+[2025-12-10 21:12:59] [RGBME] [INFO]: WebSocket opened from: ::1
+Traceback (most recent call last):
+  File "/Users/mattsaucedo/Documents/Sumo/sumo_game.py", line 748, in <module>
+    game.run()
+  File "/Users/mattsaucedo/Documents/Sumo/sumo_game.py", line 734, in run
+    self.draw()
+  File "/Users/mattsaucedo/Documents/Sumo/sumo_game.py", line 710, in draw
+    self.draw_sidebar_text()
+  File "/Users/mattsaucedo/Documents/Sumo/sumo_game.py", line 662, in draw_sidebar_text
+    txt2 = self.winner.name.upper()
+AttributeError: 'NoneType' object has no attribute 'name'

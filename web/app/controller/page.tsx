@@ -3,22 +3,18 @@
 import { useEffect, useState } from "react";
 import { api, Wrestler } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-
-import { Card } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, Swords } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
-
-// Custom simplified Select for cleaner UI if Shadcn select is too complex to setup quickly without extra files
-// We'll use native select styled for now to ensure robustness without missing components
-// actually, let's just make a simple selector component inline to avoid 'select' component issues if not fully installed (shadcn select has many parts)
+import { Card } from "@/components/ui/card";
+import { PixelSumo } from "@/components/PixelSumo";
 
 export default function ControllerPage() {
     const [wrestlers, setWrestlers] = useState<Wrestler[]>([]);
     const [p1, setP1] = useState<string>("");
     const [p2, setP2] = useState<string>("");
     const [loading, setLoading] = useState(false);
-    const [status, setStatus] = useState("");
+    const router = useRouter();
 
     useEffect(() => {
         api.getWrestlers().then(data => {
@@ -30,110 +26,140 @@ export default function ControllerPage() {
         });
     }, []);
 
+    const [buttonText, setButtonText] = useState("START FIGHT!");
+
     const handleFight = async () => {
-        if (!p1 || !p2 || p1 === p2) {
-            setStatus("SELECT DIFFERENT WRESTLERS");
-            return;
-        }
+        if (!p1 || !p2) return;
         setLoading(true);
-        setStatus("TRANSMITTING...");
-        try {
-            await api.startFight(parseInt(p1), parseInt(p2));
-            setStatus("MATCH STARTED!");
-            setTimeout(() => setStatus(""), 3000);
-        } catch {
-            setStatus("CONNECTION ERROR");
-        }
+        setButtonText("INITIALIZING...");
+        await api.startFight(parseInt(p1), parseInt(p2));
         setLoading(false);
+        setButtonText("FIGHT STARTED!");
+        setTimeout(() => setButtonText("START FIGHT!"), 2000);
     };
 
-    const getWrestler = (id: string) => wrestlers.find(w => w.id.toString() === id);
+    const getWrestler = (idStr: string) => wrestlers.find(w => w.id.toString() === idStr);
+    const w1 = getWrestler(p1);
+    const w2 = getWrestler(p2);
 
     return (
-        <div className="min-h-screen p-4 max-w-md mx-auto flex flex-col">
-            <header className="flex items-center gap-4 mb-8">
-                <Link href="/">
-                    <Button variant="outline" size="icon" className="rounded-none border-neutral-700 bg-neutral-900">
-                        <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                </Link>
-                <h1 className="font-arcade text-xl text-orange-500">FIGHT DECK</h1>
-            </header>
+        <div className="min-h-screen p-4 flex flex-col justify-between max-w-md mx-auto">
+            <div>
+                <header className="flex items-center gap-4 mb-8">
+                    <Link href="/">
+                        <Button variant="outline" size="icon" className="rounded-none border-neutral-700 bg-neutral-900">
+                            <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                    </Link>
+                    <h1 className="font-arcade text-xl text-yellow-500">FIGHT DECK</h1>
+                </header>
 
-            <div className="flex-1 flex flex-col gap-6">
-                {/* PLAYER 1 */}
-                <Card className="p-4 bg-neutral-900 border-red-900/50 border-2 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 bg-red-600 px-2 py-1 text-[10px] font-arcade text-white">P1 (RED)</div>
-                    <div className="mt-4">
-                        <select
-                            className="w-full bg-black text-white p-3 font-arcade text-sm border border-red-800 focus:outline-none focus:border-red-500"
-                            value={p1}
-                            onChange={(e) => setP1(e.target.value)}
-                        >
-                            {wrestlers.map(w => (
-                                <option key={w.id} value={w.id}>
-                                    {w.custom_name ? w.custom_name.toUpperCase() : w.name} ({w.wins}-{w.losses})
-                                </option>
-                            ))}
-                        </select>
-                        {/* Stats Preview */}
-                        {p1 && (
-                            <div className="mt-3 grid grid-cols-3 gap-2 text-[10px] text-neutral-400 font-mono">
-                                <div className="text-center">STR: {getWrestler(p1)?.strength}</div>
-                                <div className="text-center">TEC: {getWrestler(p1)?.technique}</div>
-                                <div className="text-center">SPD: {getWrestler(p1)?.speed}</div>
+                <div className="space-y-6">
+                    {/* PLAYER 1 */}
+                    <div className="bg-neutral-900 p-4 border border-neutral-800 rounded-lg relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-2 opacity-20 pointer-events-none">
+                            <span className="font-arcade text-4xl text-neutral-700">P1</span>
+                        </div>
+
+                        <label className="text-xs text-neutral-500 font-arcade mb-2 block uppercase">West Corner</label>
+                        <div className="relative">
+                            <select
+                                value={p1}
+                                onChange={(e) => setP1(e.target.value)}
+                                className="w-full bg-black text-white p-3 font-arcade text-sm border border-neutral-700 rounded appearance-none focus:border-yellow-500 outline-none"
+                            >
+                                {wrestlers.map(w => (
+                                    <option key={w.id} value={w.id}>
+                                        {w.custom_name ? w.custom_name.toUpperCase() : w.name.toUpperCase()}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-neutral-400">
+                                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
+                            </div>
+                        </div>
+
+                        {w1 && (
+                            <div className="mt-4 flex gap-4">
+                                <div className="bg-black/50 p-2 rounded border border-neutral-800">
+                                    <PixelSumo seed={w1.avatar_seed} color={w1.color} size={48} />
+                                </div>
+                                <div className="flex-1 space-y-1">
+                                    <StatBar label="STRENGTH" value={w1.strength} color={w1.color} />
+                                    <StatBar label="TECHNIQUE" value={w1.technique} color={w1.color} />
+                                    <StatBar label="SPEED" value={w1.speed} color={w1.color} />
+                                </div>
                             </div>
                         )}
                     </div>
-                </Card>
 
-                <div className="flex justify-center -my-2 z-10">
-                    <div className="bg-neutral-950 p-2 rounded-full border border-neutral-800">
-                        <div className="font-arcade text-neutral-500 text-xs">VS</div>
+                    <div className="flex justify-center items-center">
+                        <div className="bg-neutral-800 rounded-full p-2 border-2 border-neutral-900 shadow-xl">
+                            <Swords className="h-6 w-6 text-neutral-400" />
+                        </div>
                     </div>
-                </div>
 
-                {/* PLAYER 2 */}
-                <Card className="p-4 bg-neutral-900 border-blue-900/50 border-2 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 bg-blue-600 px-2 py-1 text-[10px] font-arcade text-white">P2 (BLUE)</div>
-                    <div className="mt-4">
-                        <select
-                            className="w-full bg-black text-white p-3 font-arcade text-sm border border-blue-800 focus:outline-none focus:border-blue-500"
-                            value={p2}
-                            onChange={(e) => setP2(e.target.value)}
-                        >
-                            {wrestlers.map(w => (
-                                <option key={w.id} value={w.id}>
-                                    {w.custom_name ? w.custom_name.toUpperCase() : w.name} ({w.wins}-{w.losses})
-                                </option>
-                            ))}
-                        </select>
-                        {/* Stats Preview */}
-                        {p2 && (
-                            <div className="mt-3 grid grid-cols-3 gap-2 text-[10px] text-neutral-400 font-mono">
-                                <div className="text-center">STR: {getWrestler(p2)?.strength}</div>
-                                <div className="text-center">TEC: {getWrestler(p2)?.technique}</div>
-                                <div className="text-center">SPD: {getWrestler(p2)?.speed}</div>
+                    {/* PLAYER 2 */}
+                    <div className="bg-neutral-900 p-4 border border-neutral-800 rounded-lg relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-2 opacity-20 pointer-events-none">
+                            <span className="font-arcade text-4xl text-neutral-700">P2</span>
+                        </div>
+
+                        <label className="text-xs text-neutral-500 font-arcade mb-2 block uppercase">East Corner</label>
+                        <div className="relative">
+                            <select
+                                value={p2}
+                                onChange={(e) => setP2(e.target.value)}
+                                className="w-full bg-black text-white p-3 font-arcade text-sm border border-neutral-700 rounded appearance-none focus:border-blue-500 outline-none"
+                            >
+                                {wrestlers.map(w => (
+                                    <option key={w.id} value={w.id}>
+                                        {w.custom_name ? w.custom_name.toUpperCase() : w.name.toUpperCase()}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-neutral-400">
+                                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
+                            </div>
+                        </div>
+
+                        {w2 && (
+                            <div className="mt-4 flex gap-4">
+                                <div className="bg-black/50 p-2 rounded border border-neutral-800">
+                                    <PixelSumo seed={w2.avatar_seed} color={w2.color} size={48} />
+                                </div>
+                                <div className="flex-1 space-y-1">
+                                    <StatBar label="STRENGTH" value={w2.strength} color={w2.color} />
+                                    <StatBar label="TECHNIQUE" value={w2.technique} color={w2.color} />
+                                    <StatBar label="SPEED" value={w2.speed} color={w2.color} />
+                                </div>
                             </div>
                         )}
                     </div>
-                </Card>
-
-                <Button
-                    onClick={handleFight}
-                    disabled={loading}
-                    className={cn(
-                        "w-full h-24 text-2xl font-arcade border-4 border-white bg-orange-600 hover:bg-orange-500 text-white rounded-none shadow-[4px_4px_0px_#000] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all mt-auto",
-                        loading && "bg-neutral-700 border-neutral-500"
-                    )}
-                >
-                    {loading ? "LOAD..." : "FIGHT!"}
-                </Button>
-
-                <div className="h-8 text-center font-arcade text-green-500 text-xs animate-pulse">
-                    {status}
                 </div>
             </div>
+
+            <Button
+                onClick={handleFight}
+                disabled={loading || !p1 || !p2}
+                className="w-full h-16 text-xl bg-orange-600 hover:bg-orange-500 font-arcade tracking-widest mt-8 border-b-4 border-orange-800 active:border-b-0 active:mt-[34px] transition-all"
+            >
+                {buttonText}
+            </Button>
         </div>
     );
+}
+
+function StatBar({ label, value, color }: { label: string, value: number, color: string }) {
+    return (
+        <div className="flex items-center gap-2">
+            <span className="text-[9px] w-14 font-bold text-neutral-500">{label}</span>
+            <div className="flex-1 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                <div
+                    className="h-full"
+                    style={{ width: `${Math.min(100, (value / 2.0) * 100)}%`, backgroundColor: `rgb(${color})` }}
+                />
+            </div>
+        </div>
+    )
 }
