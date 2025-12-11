@@ -73,13 +73,13 @@ export default function ProfilesPage() {
             <header className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-4">
                     <Link href="/">
-                        <Button variant="outline" size="icon" className="gba-panel">
-                            <ArrowLeft className="h-4 w-4" />
+                        <Button variant="outline" size="icon" className="gba-btn h-9 w-9 p-0 border-2">
+                            <ArrowLeft className="h-5 w-5 text-white" />
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="font-[family-name:var(--font-dotgothic)] text-xl text-[var(--jade)]">BANZUKE</h1>
-                        <p className="text-[10px] text-muted-foreground">番付 • Rankings</p>
+                        <h1 className="font-[family-name:var(--font-dotgothic)] text-2xl text-[var(--jade)] drop-shadow-[2px_2px_0_#000] tracking-wide">BANZUKE</h1>
+                        <p className="text-xs text-white/80 font-[family-name:var(--font-dotgothic)] drop-shadow-[1px_1px_0_#000]">番付 • Rankings</p>
                     </div>
                 </div>
             </header>
@@ -181,17 +181,31 @@ export default function ProfilesPage() {
                                 NO BASHO RECORDS
                             </div>
                         )}
-                        {history.map(match => (
-                            <Card key={match.id} className="gba-panel p-3 flex justify-between items-center relative">
-                                <div className="text-xs font-[family-name:var(--font-dotgothic)] text-muted-foreground w-2/5 text-right pr-2 truncate">
-                                    {match.p1_custom ? match.p1_custom.toUpperCase() : match.p1_name.toUpperCase()}
+                        {history.map(match => {
+                            // Determine winner logic if possible, otherwise rely on winner_name
+                            const winnerIsP1 = match.winner_custom ? match.winner_custom === match.p1_custom : match.winner_name === match.p1_name;
+
+                            return (
+                                <div key={match.id} className="gba-panel p-3 flex justify-between items-center bg-[#2a1f3d] border-2 border-[#3d2d5c] shadow-sm mb-2">
+                                    {/* Player 1 */}
+                                    <div className={`text-sm font-[family-name:var(--font-dotgothic)] w-2/5 text-right pr-3 truncate ${winnerIsP1 ? 'text-[#FFD700] drop-shadow-[1px_1px_0_rgba(0,0,0,0.8)]' : 'text-gray-400'}`}>
+                                        {match.p1_custom ? match.p1_custom.toUpperCase() : match.p1_name.toUpperCase()}
+                                        {winnerIsP1 && <span className="ml-1 text-[10px] text-[#FFD700]">★</span>}
+                                    </div>
+
+                                    {/* VS Badge */}
+                                    <div className="w-6 h-6 rounded-full bg-[#1a1428] border border-gray-600 flex items-center justify-center shrink-0">
+                                        <span className="text-[8px] text-gray-400 font-[family-name:var(--font-dotgothic)]">VS</span>
+                                    </div>
+
+                                    {/* Player 2 */}
+                                    <div className={`text-sm font-[family-name:var(--font-dotgothic)] w-2/5 pl-3 truncate ${!winnerIsP1 ? 'text-[#FFD700] drop-shadow-[1px_1px_0_rgba(0,0,0,0.8)]' : 'text-gray-400'}`}>
+                                        {!winnerIsP1 && <span className="mr-1 text-[10px] text-[#FFD700]">★</span>}
+                                        {match.p2_custom ? match.p2_custom.toUpperCase() : match.p2_name.toUpperCase()}
+                                    </div>
                                 </div>
-                                <div className="text-[10px] text-muted-foreground px-2 font-[family-name:var(--font-dotgothic)]">対</div>
-                                <div className="text-xs font-[family-name:var(--font-dotgothic)] text-muted-foreground w-2/5 pl-2 truncate">
-                                    {match.p2_custom ? match.p2_custom.toUpperCase() : match.p2_name.toUpperCase()}
-                                </div>
-                            </Card>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>

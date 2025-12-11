@@ -76,7 +76,7 @@ export default function ControllerPage() {
             </header>
 
             {/* Main Content - Flex to fill space */}
-            <div className="flex-1 flex flex-col justify-between min-h-0">
+            <div className="flex-1 flex flex-col justify-center gap-6 min-h-0">
                 {/* EAST Fighter */}
                 <div className="gba-menu-btn p-3 relative">
                     <div className="absolute top-1 right-2 text-2xl text-[#DC143C] opacity-40 font-[family-name:var(--font-dotgothic)]">東</div>
