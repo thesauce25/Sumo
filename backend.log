@@ -1,0 +1,42 @@
+[2025-12-10 20:53:27] [RGBME] [ERROR]: 
+Failed to load SixelAdapter for "sixel" display adapter!
+
+If this is not your configured display adapter, the emulator will continue to load.
+
+You can suppress this error in the `emulator_config.json` by adding:
+
+  "suppress_adapter_load_errors": true
+
+Traceback (most recent call last):
+  File "/Users/mattsaucedo/Documents/Sumo/sumo_game.py", line 254, in <module>
+    from rgbmatrix import RGBMatrix, RGBMatrixOptions, graphics
+ModuleNotFoundError: No module named 'rgbmatrix'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/mattsaucedo/Library/Python/3.9/lib/python/site-packages/RGBMatrixEmulator/adapters/__init__.py", line 80, in <module>
+    package = importlib.import_module(package_path)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1030, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1007, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 986, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 680, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 850, in exec_module
+  File "<frozen importlib._bootstrap>", line 228, in _call_with_frames_removed
+  File "/Users/mattsaucedo/Library/Python/3.9/lib/python/site-packages/RGBMatrixEmulator/adapters/sixel_adapter.py", line 5, in <module>
+    import libsixel as sixel
+  File "/Users/mattsaucedo/Library/Python/3.9/lib/python/site-packages/libsixel/__init__.py", line 352, in <module>
+    raise ImportError("libsixel not found.")
+ImportError: libsixel not found.
+[2025-12-10 20:53:27] [RGBME] [INFO]: RGBME v0.14.1 - 64x32 Matrix | 1x1 Chain | 16px per LED (SQUARE) | BrowserAdapter
+[2025-12-10 20:53:27] [RGBME] [INFO]: Starting server...
+[2025-12-10 20:53:27] [RGBME] [INFO]: Server started and ready to accept requests on http://localhost:8888/
+Migrating DB: Adding is_active column...
+Hardware library NOT found. Falling back to RGBMatrixEmulator...
+Sumo Smash Started! Press Ctrl+C to exit.
+Mobile Remote running at: http://<YOUR_IP>:5001
+ * Serving Flask app 'sumo_game'
+ * Debug mode: off
+[2025-12-10 20:53:31] [RGBME] [INFO]: WebSocket opened from: ::1
