@@ -264,6 +264,14 @@ def record_win(winner_data: Dict[str, Any], loser_data: Dict[str, Any]) -> None:
     conn.close()
     print(f"Match recorded: {winner_data['name']} def. {loser_data['name']}")
 
+@app.route('/api/status', methods=['GET'])
+def get_status():
+    status = "WAITING"
+    state = GAME_STATE.get('current_state', C.STATE_WAITING)
+    if state != C.STATE_WAITING:
+        status = "FIGHTING"
+    return jsonify({"status": status, "state_id": state})
+
 def run_flask():
     app.run(host=C.FLASK_HOST, port=C.FLASK_PORT)
 
@@ -387,6 +395,9 @@ class SumoGame:
 
     def logic(self) -> None:
         self.update_names_from_remote()
+        
+        # Expose Status for Lockout
+        GAME_STATE['current_state'] = self.state
 
         if self.state == C.STATE_THROW:
             self.p1.x += self.p1.vx
@@ -511,30 +522,42 @@ class SumoGame:
         col_center = 16
         
         if self.state == C.STATE_INTRO:
-             # RED
-             txt1 = self.p1.name
-             w1 = len(txt1) * 4 - 1
-             draw_text_small(self.canvas, col_center - w1/2, 2, txt1, C.COLOR_RED)
+             lines = []
+             # 1. P1 Name
+             lines.append((self.p1.name, C.COLOR_RED))
              
+             # 2. P1 Record (Optional)
              if self.p1.data:
                  rec1 = f"{self.p1.data.get('wins',0)}-{self.p1.data.get('losses',0)}"
-                 w_rec1 = len(rec1) * 4 - 1
-                 draw_text_small(self.canvas, col_center - w_rec1/2, 8, rec1, C.COLOR_GREY)
-
-             # VS
-             txt2 = "VS"
-             w2 = len(txt2) * 4 - 1
-             draw_text_small(self.canvas, col_center - w2/2, 14, txt2, C.COLOR_WHITE)
+                 lines.append((rec1, C.COLOR_GREY))
              
-             # BLUE
-             txt3 = self.p2.name
-             w3 = len(txt3) * 4 - 1
-             draw_text_small(self.canvas, col_center - w3/2, 22, txt3, C.COLOR_BLUE)
+             # 3. VS
+             lines.append(("VS", C.COLOR_WHITE))
              
+             # 4. P2 Name
+             lines.append((self.p2.name, C.COLOR_BLUE))
+             
+             # 5. P2 Record (Optional)
              if self.p2.data:
                  rec2 = f"{self.p2.data.get('wins',0)}-{self.p2.data.get('losses',0)}"
-                 w_rec2 = len(rec2) * 4 - 1
-                 draw_text_small(self.canvas, col_center - w_rec2/2, 28, rec2, C.COLOR_GREY)
+                 lines.append((rec2, C.COLOR_GREY))
+                 
+             # Calculate Layout
+             print(f"DEBUG Layout: {lines}")
+                 
+             # Calculate Layout
+             num_lines = len(lines)
+             line_height = 5
+             spacing = 1
+             total_h = (num_lines * line_height) + ((num_lines - 1) * spacing)
+             start_y = int((C.HEIGHT - total_h) / 2)
+             
+             # Draw
+             curr_y = start_y
+             for text, color in lines:
+                 w = len(text) * 4 - 1
+                 draw_text_small(self.canvas, col_center - w/2, curr_y, text, color)
+                 curr_y += line_height + spacing
 
         elif self.state == C.STATE_READY:
              txt1 = "HAKKEYOI"

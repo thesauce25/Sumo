@@ -94,3 +94,50 @@ Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allow
  GET /profiles 200 in 9ms (compile: 3ms, render: 6ms)
  GET /profiles/7 200 in 426ms (compile: 417ms, render: 9ms)
  GET /profiles 200 in 12ms (compile: 3ms, render: 9ms)
+ GET / 200 in 13ms (compile: 4ms, render: 9ms)
+ GET /controller 200 in 13ms (compile: 4ms, render: 10ms)
+ ✓ Compiled in 33ms
+ ✓ Compiled in 18ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⨯ ReferenceError: buttonText is not defined
+    at ControllerPage (app/controller/page.tsx:45:9)
+  43 |         }, 1000);
+  44 |         return () => clearInterval(interval);
+> 45 |     }, [buttonText]);
+     |         ^
+  46 |
+  47 |     const handleFight = async () => {
+  48 |         if (!p1 || !p2) return; {
+  digest: '922507598'
+}
+ GET /controller 500 in 173ms (compile: 104ms, render: 69ms)
+ ✓ Compiled in 16ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⨯ ReferenceError: buttonText is not defined
+    at ControllerPage (app/controller/page.tsx:45:9)
+  43 |         }, 1000);
+  44 |         return () => clearInterval(interval);
+> 45 |     }, [buttonText]);
+     |         ^
+  46 |
+  47 |     const handleFight = async () => {
+  48 |         if (!p1 || !p2) return; {
+  digest: '922507598'
+}
+ GET /controller 500 in 112ms (compile: 37ms, render: 75ms)
+ ✓ Compiled in 14ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⨯ ReferenceError: buttonText is not defined
+    at ControllerPage (app/controller/page.tsx:45:9)
+  43 |         }, 1000);
+  44 |         return () => clearInterval(interval);
+> 45 |     }, [buttonText]);
+     |         ^
+  46 |
+  47 |     const handleFight = async () => {
+  48 |         if (!p1 || !p2) return; {
+  digest: '922507598'
+}
+ GET /controller 500 in 60ms (compile: 20ms, render: 39ms)
+ GET / 200 in 34ms (compile: 8ms, render: 25ms)
+ GET /controller 200 in 51ms (compile: 42ms, render: 9ms)

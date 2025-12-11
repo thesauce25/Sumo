@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, Wrestler } from "@/lib/api";
+import { api, Wrestler, getApiUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Swords } from "lucide-react";
@@ -15,6 +15,7 @@ export default function ControllerPage() {
     const [p2, setP2] = useState<string>("");
     const [loading, setLoading] = useState(false);
     const router = useRouter();
+    const [buttonText, setButtonText] = useState("START FIGHT!");
 
     useEffect(() => {
         api.getWrestlers().then(data => {
@@ -26,16 +27,30 @@ export default function ControllerPage() {
         });
     }, []);
 
-    const [buttonText, setButtonText] = useState("START FIGHT!");
+    useEffect(() => {
+        const interval = setInterval(() => {
+            fetch(`${getApiUrl()}/status`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "FIGHTING") {
+                        setLoading(true);
+                        setButtonText("FIGHT IN PROGRESS...");
+                    } else if (buttonText === "FIGHT IN PROGRESS...") {
+                        setLoading(false);
+                        setButtonText("START FIGHT!");
+                    }
+                })
+                .catch(err => console.error(err));
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [buttonText]);
 
     const handleFight = async () => {
         if (!p1 || !p2) return;
         setLoading(true);
         setButtonText("INITIALIZING...");
         await api.startFight(parseInt(p1), parseInt(p2));
-        setLoading(false);
-        setButtonText("FIGHT STARTED!");
-        setTimeout(() => setButtonText("START FIGHT!"), 2000);
+        // Status polling will take over text update
     };
 
     const getWrestler = (idStr: string) => wrestlers.find(w => w.id.toString() === idStr);
@@ -141,7 +156,7 @@ export default function ControllerPage() {
 
             <Button
                 onClick={handleFight}
-                disabled={loading || !p1 || !p2}
+                disabled={loading || !p1 || !p2 || buttonText === "FIGHT IN PROGRESS..."}
                 className="w-full h-16 text-xl bg-orange-600 hover:bg-orange-500 font-arcade tracking-widest mt-8 border-b-4 border-orange-800 active:border-b-0 active:mt-[34px] transition-all"
             >
                 {buttonText}

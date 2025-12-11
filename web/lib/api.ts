@@ -1,4 +1,4 @@
-const getApiUrl = () => {
+export const getApiUrl = () => {
     if (typeof window !== 'undefined') {
         return `${window.location.protocol}//${window.location.hostname}:5001/api`;
     }
