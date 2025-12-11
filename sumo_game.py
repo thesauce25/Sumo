@@ -4,6 +4,241 @@ import random
 import math
 import sys
 import os
+import threading
+import json
+import logging
+
+# --- Flask Setup (Mobile Remote) ---
+# Suppress Flask logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
+try:
+    from flask import Flask, request, jsonify, render_template_string
+except ImportError:
+    print("Flask not found. Please install: pip install flask")
+    sys.exit(1)
+
+app = Flask(__name__)
+
+# Shared State (Game Loop <-> Web Server)
+GAME_STATE = {
+    "p1_name": "RED",
+    "p2_name": "BLUE",
+    "reset_requested": False
+}
+
+# Embedded Mobile UI (HTML/CSS/JS)
+HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SUMO SMASH</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #212121;
+            --p1: #e74c3c;
+            --p2: #3498db;
+            --text: #ecf0f1;
+            --shadow: 4px 4px 0px #000;
+        }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Press Start 2P', cursive;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100dvh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: center;
+            text-transform: uppercase;
+        }
+        /* Scanline Effect */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        h1 {
+            font-size: 20px;
+            line-height: 1.5;
+            margin-bottom: 40px;
+            text-shadow: 4px 4px 0px #000;
+            color: #f1c40f;
+        }
+        
+        .input-group {
+            width: 100%;
+            max-width: 350px;
+            margin-bottom: 25px;
+            position: relative;
+            z-index: 3;
+        }
+        
+        label {
+            display: block;
+            font-size: 10px;
+            margin-bottom: 10px;
+            color: #95a5a6;
+        }
+        
+        input {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            background: #000;
+            border: 4px solid #fff;
+            color: #fff;
+            border-radius: 0; /* 8-bit ! */
+            box-sizing: border-box;
+            font-family: 'Press Start 2P', cursive;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+        
+        input:focus {
+            outline: none;
+            background: #111;
+        }
+
+        .red-input input { border-color: var(--p1); color: var(--p1); }
+        .blue-input input { border-color: var(--p2); color: var(--p2); }
+        
+        button {
+            width: 100%;
+            max-width: 350px;
+            padding: 25px;
+            font-size: 20px;
+            background: #e67e22; /* Arcade Orange */
+            border: 4px solid #fff;
+            color: white;
+            border-radius: 0;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            font-family: 'Press Start 2P', cursive;
+            position: relative;
+            z-index: 3;
+            margin-top: 20px;
+            transition: all 0.1s;
+        }
+        
+        button:active {
+            transform: translate(4px, 4px);
+            box-shadow: none;
+        }
+        
+        button:disabled {
+            background: #7f8c8d;
+            border-color: #95a5a6;
+            cursor: not-allowed;
+            transform: translate(4px, 4px);
+            box-shadow: none;
+        }
+
+        .status {
+            margin-top: 30px;
+            height: 20px;
+            color: #2ecc71;
+            font-size: 10px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            text-shadow: 2px 2px 0px #000;
+        }
+        .show-status { opacity: 1; }
+    </style>
+</head>
+<body>
+    <h1>SUMO SMASH<br>CHAMPIONSHIP</h1>
+    
+    <div class="input-group red-input">
+        <label>PLAYER 1 (RED)</label>
+        <input type="text" id="p1" value="RED" maxlength="6">
+    </div>
+    
+    <div class="input-group blue-input">
+        <label>PLAYER 2 (BLUE)</label>
+        <input type="text" id="p2" value="BLUE" maxlength="6">
+    </div>
+    
+    <button id="fightBtn" onclick="startMatch()">FIGHT!</button>
+    <div class="status" id="status">MATCH START!</div>
+
+    <script>
+        async function startMatch() {
+            const p1 = document.getElementById('p1').value || "RED";
+            const p2 = document.getElementById('p2').value || "BLUE";
+            const btn = document.getElementById('fightBtn');
+            const status = document.getElementById('status');
+            
+            // UX: Prevent Double Submission
+            btn.disabled = true;
+            btn.innerText = "LOADING...";
+            
+            try {
+                const res = await fetch('/api/fight', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ p1_name: p1, p2_name: p2 })
+                });
+                
+                if (res.ok) {
+                    status.classList.add('show-status');
+                    setTimeout(() => status.classList.remove('show-status'), 2000);
+                    
+                    // Keep disabled for a bit to prevent spamming restart
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.innerText = "REMATCH!";
+                    }, 5000);
+                } else {
+                     // Error fallback
+                     btn.disabled = false;
+                     btn.innerText = "TRY AGAIN";
+                }
+            } catch (e) {
+                console.error(e);
+                btn.disabled = false;
+                btn.innerText = "ERROR";
+            }
+        }
+    </script>
+</body>
+</html>
+"""
+
+@app.route('/')
+def index():
+    return render_template_string(HTML_TEMPLATE)
+
+@app.route('/api/fight', methods=['POST'])
+def api_fight():
+    data = request.json
+    GAME_STATE['p1_name'] = data.get('p1_name', 'RED')[:6].upper() # Limit 6 chars for display
+    GAME_STATE['p2_name'] = data.get('p2_name', 'BLUE')[:6].upper()
+    GAME_STATE['reset_requested'] = True
+    print(f"Update received: {GAME_STATE['p1_name']} vs {GAME_STATE['p2_name']}")
+    return jsonify({"success": True})
+
+def run_flask():
+    # Run on 0.0.0.0 to be accessible from local network (Phone)
+    # Port 5001 to avoid MacOS AirPlay conflict on 5000
+    app.run(host='0.0.0.0', port=5001)
 
 # --- Hardware/Emulator Fallback ---
 try:
@@ -141,8 +376,8 @@ class SumoGame:
         self.winner = None
         
         # Spawning (CENTER_X is now 48)
-        self.p1 = Wrestler(CENTER_X - 10, CENTER_Y - 1, COLOR_RED, "Red")
-        self.p2 = Wrestler(CENTER_X + 8, CENTER_Y - 1, COLOR_BLUE, "Blue")
+        self.p1 = Wrestler(CENTER_X - 10, CENTER_Y - 1, COLOR_RED, "RED")
+        self.p2 = Wrestler(CENTER_X + 8, CENTER_Y - 1, COLOR_BLUE, "BLUE")
 
     def apply_screen_shake(self, frames, intensity=1):
         self.shake_time = frames
@@ -155,7 +390,19 @@ class SumoGame:
             return True
         return False
 
+    def update_names_from_remote(self):
+        """Checks shared state for name updates."""
+        if GAME_STATE['reset_requested']:
+             self.p1.name = GAME_STATE['p1_name']
+             self.p2.name = GAME_STATE['p2_name']
+             self.state = STATE_RESET
+             self.timer = 1000 # Force immediate reset logic in logic()
+             GAME_STATE['reset_requested'] = False
+
     def logic(self):
+        # Poll Remote
+        self.update_names_from_remote()
+
         if self.state == STATE_THROW:
             self.p1.x += self.p1.vx
             self.p1.y += self.p1.vy
@@ -277,7 +524,7 @@ class SumoGame:
         
         if self.state == STATE_INTRO:
              # RED
-             txt1 = "RED"
+             txt1 = self.p1.name
              w1 = len(txt1) * 4 - 1
              draw_text_small(self.canvas, col_center - w1/2, 4, txt1, COLOR_RED)
              # VS
@@ -285,7 +532,7 @@ class SumoGame:
              w2 = len(txt2) * 4 - 1
              draw_text_small(self.canvas, col_center - w2/2, 13, txt2, COLOR_WHITE)
              # BLUE
-             txt3 = "BLUE"
+             txt3 = self.p2.name
              w3 = len(txt3) * 4 - 1
              draw_text_small(self.canvas, col_center - w3/2, 22, txt3, COLOR_BLUE)
 
@@ -380,6 +627,12 @@ class SumoGame:
 
     def run(self):
         print("Sumo Smash Started! Press Ctrl+C to exit.")
+        print("Mobile Remote running at: http://<YOUR_IP>:5001")
+        
+        # Start Flask in separate thread
+        flask_thread = threading.Thread(target=run_flask, daemon=True)
+        flask_thread.start()
+        
         try:
             while True:
                 start_time = time.time()
