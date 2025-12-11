@@ -1,17 +1,21 @@
 import type { Metadata } from "next";
-import { Inter, Press_Start_2P } from "next/font/google";
+import { Inter, DotGothic16 } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const pressStart = Press_Start_2P({
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter"
+});
+
+const dotGothic = DotGothic16({
   weight: "400",
   subsets: ["latin"],
-  variable: "--font-arcade"
+  variable: "--font-dotgothic"
 });
 
 export const metadata: Metadata = {
-  title: "SUMO SMASH CHAMPIONSHIP",
-  description: "The Official Sumo Smash Companion App",
+  title: "SUMO SMASH | 大相撲スマッシュ",
+  description: "The Official Sumo Smash Championship Companion App",
 };
 
 export default function RootLayout({
@@ -21,8 +25,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.variable} ${pressStart.variable} bg-neutral-950 text-neutral-50 antialiased min-h-screen selection:bg-orange-500 selection:text-white overflow-x-hidden`}>
-        <div className="fixed inset-0 pointer-events-none z-50 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] opacity-20" />
+      <body className={`${inter.variable} ${dotGothic.variable} antialiased min-h-[100dvh] overflow-x-hidden selection:bg-[var(--gold)] selection:text-black`}>
+        {/* LCD Scanline Overlay - subtle GBA effect */}
+        <div className="fixed inset-0 pointer-events-none z-50 lcd-overlay opacity-15" aria-hidden="true" />
+
+        {/* Main Content */}
         {children}
       </body>
     </html>

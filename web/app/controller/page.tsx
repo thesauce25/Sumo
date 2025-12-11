@@ -1,31 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { api, Wrestler, getApiUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, Swords } from "lucide-react";
 import Link from "next/link";
-import { Card } from "@/components/ui/card";
 import { PixelSumo } from "@/components/PixelSumo";
+import { ArrowLeft } from "lucide-react";
 
 export default function ControllerPage() {
     const [wrestlers, setWrestlers] = useState<Wrestler[]>([]);
     const [p1, setP1] = useState<string>("");
     const [p2, setP2] = useState<string>("");
     const [loading, setLoading] = useState(false);
-    const router = useRouter();
-    const [buttonText, setButtonText] = useState("START FIGHT!");
+    const [buttonText, setButtonText] = useState("TACHIAI!");
 
-    useEffect(() => {
+    const fetchWrestlers = useCallback(() => {
         api.getWrestlers().then(data => {
             setWrestlers(data);
-            if (data.length >= 2) {
+            if (data.length >= 2 && !p1 && !p2) {
                 setP1(data[0].id.toString());
                 setP2(data[1].id.toString());
             }
         });
-    }, []);
+    }, [p1, p2]);
+
+    useEffect(() => {
+        fetchWrestlers();
+        const pollInterval = setInterval(fetchWrestlers, 5000);
+        return () => clearInterval(pollInterval);
+    }, [fetchWrestlers]);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -34,23 +37,23 @@ export default function ControllerPage() {
                 .then(data => {
                     if (data.status === "FIGHTING") {
                         setLoading(true);
-                        setButtonText("FIGHT IN PROGRESS...");
-                    } else if (buttonText === "FIGHT IN PROGRESS...") {
+                        setButtonText("NOKOTTA...");
+                    } else if (buttonText === "NOKOTTA...") {
                         setLoading(false);
-                        setButtonText("START FIGHT!");
+                        setButtonText("TACHIAI!");
+                        fetchWrestlers();
                     }
                 })
                 .catch(err => console.error(err));
         }, 1000);
         return () => clearInterval(interval);
-    }, [buttonText]);
+    }, [buttonText, fetchWrestlers]);
 
     const handleFight = async () => {
         if (!p1 || !p2) return;
         setLoading(true);
-        setButtonText("INITIALIZING...");
+        setButtonText("HAKKEYOI...");
         await api.startFight(parseInt(p1), parseInt(p2));
-        // Status polling will take over text update
     };
 
     const getWrestler = (idStr: string) => wrestlers.find(w => w.id.toString() === idStr);
@@ -58,122 +61,123 @@ export default function ControllerPage() {
     const w2 = getWrestler(p2);
 
     return (
-        <div className="min-h-screen p-4 flex flex-col justify-between max-w-md mx-auto">
-            <div>
-                <header className="flex items-center gap-4 mb-8">
-                    <Link href="/">
-                        <Button variant="outline" size="icon" className="rounded-none border-neutral-700 bg-neutral-900">
-                            <ArrowLeft className="h-4 w-4" />
-                        </Button>
-                    </Link>
-                    <h1 className="font-arcade text-xl text-yellow-500">FIGHT DECK</h1>
-                </header>
+        <div className="h-[100dvh] p-3 flex flex-col max-w-md mx-auto bg-[#1a1428] overflow-hidden">
+            {/* GBA Top Border */}
+            <div className="h-1.5 bg-gradient-to-r from-[#8B4513] via-[#CD853F] to-[#8B4513] -mx-3 -mt-3 mb-2" />
 
-                <div className="space-y-6">
-                    {/* PLAYER 1 */}
-                    <div className="bg-neutral-900 p-4 border border-neutral-800 rounded-lg relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-2 opacity-20 pointer-events-none">
-                            <span className="font-arcade text-4xl text-neutral-700">P1</span>
-                        </div>
+            {/* Compact Header */}
+            <header className="flex items-center gap-3 mb-2">
+                <Link href="/">
+                    <Button variant="outline" size="icon" className="gba-panel h-8 w-8">
+                        <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                </Link>
+                <h1 className="font-[family-name:var(--font-dotgothic)] text-lg text-[#FFD700] [text-shadow:_1px_1px_0_#000]">TACHIAI</h1>
+            </header>
 
-                        <label className="text-xs text-neutral-500 font-arcade mb-2 block uppercase">West Corner</label>
-                        <div className="relative">
-                            <select
-                                value={p1}
-                                onChange={(e) => setP1(e.target.value)}
-                                className="w-full bg-black text-white p-3 font-arcade text-sm border border-neutral-700 rounded appearance-none focus:border-yellow-500 outline-none"
-                            >
-                                {wrestlers.map(w => (
-                                    <option key={w.id} value={w.id}>
-                                        {w.custom_name ? w.custom_name.toUpperCase() : w.name.toUpperCase()}
-                                    </option>
-                                ))}
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-neutral-400">
-                                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
+            {/* Main Content - Flex to fill space */}
+            <div className="flex-1 flex flex-col justify-between min-h-0">
+                {/* EAST Fighter */}
+                <div className="gba-menu-btn p-3 relative">
+                    <div className="absolute top-1 right-2 text-2xl text-[#DC143C] opacity-40 font-[family-name:var(--font-dotgothic)]">東</div>
+                    <p className="text-[10px] text-[#87CEEB] font-[family-name:var(--font-dotgothic)] mb-1">EAST</p>
+                    <select
+                        value={p1}
+                        onChange={(e) => setP1(e.target.value)}
+                        className="w-full bg-[#2a1f3d] text-white p-2 text-sm font-[family-name:var(--font-dotgothic)] border-2 border-[#3d2d5c] focus:border-[#FFD700] outline-none"
+                    >
+                        {wrestlers.map(w => (
+                            <option key={w.id} value={w.id}>
+                                {(w.custom_name || w.name).toUpperCase()} ({w.wins}-{w.matches - w.wins})
+                            </option>
+                        ))}
+                    </select>
+                    {w1 && (
+                        <div className="mt-2 flex gap-3 items-center">
+                            <div className="bg-[#1a1428] p-1.5 border-2 border-[#3d2d5c]">
+                                <PixelSumo seed={w1.avatar_seed} color={w1.color} size={44} />
+                            </div>
+                            <div className="flex-1">
+                                <div className="flex items-center gap-1 mb-1.5">
+                                    <span className="text-lg font-[family-name:var(--font-dotgothic)] text-[#FFD700]">{w1.wins}</span>
+                                    <span className="text-[10px] text-gray-400">W</span>
+                                    <span className="text-gray-500 mx-0.5">-</span>
+                                    <span className="text-lg font-[family-name:var(--font-dotgothic)] text-[#DC143C]">{w1.matches - w1.wins}</span>
+                                    <span className="text-[10px] text-gray-400">L</span>
+                                </div>
+                                <StatBar label="STR" value={w1.strength} color={w1.color} />
+                                <StatBar label="TEC" value={w1.technique} color={w1.color} />
+                                <StatBar label="SPD" value={w1.speed} color={w1.color} />
                             </div>
                         </div>
+                    )}
+                </div>
 
-                        {w1 && (
-                            <div className="mt-4 flex gap-4">
-                                <div className="bg-black/50 p-2 rounded border border-neutral-800">
-                                    <PixelSumo seed={w1.avatar_seed} color={w1.color} size={48} />
-                                </div>
-                                <div className="flex-1 space-y-1">
-                                    <StatBar label="STRENGTH" value={w1.strength} color={w1.color} />
-                                    <StatBar label="TECHNIQUE" value={w1.technique} color={w1.color} />
-                                    <StatBar label="SPEED" value={w1.speed} color={w1.color} />
-                                </div>
-                            </div>
-                        )}
+                {/* VS Badge - Compact */}
+                <div className="flex justify-center py-1">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-b from-[#CD853F] to-[#8B4513] flex items-center justify-center border-2 border-[#DEB887]">
+                        <span className="font-[family-name:var(--font-dotgothic)] text-sm text-white [text-shadow:_1px_1px_0_#000]">対</span>
                     </div>
+                </div>
 
-                    <div className="flex justify-center items-center">
-                        <div className="bg-neutral-800 rounded-full p-2 border-2 border-neutral-900 shadow-xl">
-                            <Swords className="h-6 w-6 text-neutral-400" />
-                        </div>
-                    </div>
-
-                    {/* PLAYER 2 */}
-                    <div className="bg-neutral-900 p-4 border border-neutral-800 rounded-lg relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-2 opacity-20 pointer-events-none">
-                            <span className="font-arcade text-4xl text-neutral-700">P2</span>
-                        </div>
-
-                        <label className="text-xs text-neutral-500 font-arcade mb-2 block uppercase">East Corner</label>
-                        <div className="relative">
-                            <select
-                                value={p2}
-                                onChange={(e) => setP2(e.target.value)}
-                                className="w-full bg-black text-white p-3 font-arcade text-sm border border-neutral-700 rounded appearance-none focus:border-blue-500 outline-none"
-                            >
-                                {wrestlers.map(w => (
-                                    <option key={w.id} value={w.id}>
-                                        {w.custom_name ? w.custom_name.toUpperCase() : w.name.toUpperCase()}
-                                    </option>
-                                ))}
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-neutral-400">
-                                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
+                {/* WEST Fighter */}
+                <div className="gba-menu-btn p-3 relative">
+                    <div className="absolute top-1 right-2 text-2xl text-[#50C878] opacity-40 font-[family-name:var(--font-dotgothic)]">西</div>
+                    <p className="text-[10px] text-[#87CEEB] font-[family-name:var(--font-dotgothic)] mb-1">WEST</p>
+                    <select
+                        value={p2}
+                        onChange={(e) => setP2(e.target.value)}
+                        className="w-full bg-[#2a1f3d] text-white p-2 text-sm font-[family-name:var(--font-dotgothic)] border-2 border-[#3d2d5c] focus:border-[#50C878] outline-none"
+                    >
+                        {wrestlers.map(w => (
+                            <option key={w.id} value={w.id}>
+                                {(w.custom_name || w.name).toUpperCase()} ({w.wins}-{w.matches - w.wins})
+                            </option>
+                        ))}
+                    </select>
+                    {w2 && (
+                        <div className="mt-2 flex gap-3 items-center">
+                            <div className="bg-[#1a1428] p-1.5 border-2 border-[#3d2d5c]">
+                                <PixelSumo seed={w2.avatar_seed} color={w2.color} size={44} />
+                            </div>
+                            <div className="flex-1">
+                                <div className="flex items-center gap-1 mb-1.5">
+                                    <span className="text-lg font-[family-name:var(--font-dotgothic)] text-[#FFD700]">{w2.wins}</span>
+                                    <span className="text-[10px] text-gray-400">W</span>
+                                    <span className="text-gray-500 mx-0.5">-</span>
+                                    <span className="text-lg font-[family-name:var(--font-dotgothic)] text-[#DC143C]">{w2.matches - w2.wins}</span>
+                                    <span className="text-[10px] text-gray-400">L</span>
+                                </div>
+                                <StatBar label="STR" value={w2.strength} color={w2.color} />
+                                <StatBar label="TEC" value={w2.technique} color={w2.color} />
+                                <StatBar label="SPD" value={w2.speed} color={w2.color} />
                             </div>
                         </div>
-
-                        {w2 && (
-                            <div className="mt-4 flex gap-4">
-                                <div className="bg-black/50 p-2 rounded border border-neutral-800">
-                                    <PixelSumo seed={w2.avatar_seed} color={w2.color} size={48} />
-                                </div>
-                                <div className="flex-1 space-y-1">
-                                    <StatBar label="STRENGTH" value={w2.strength} color={w2.color} />
-                                    <StatBar label="TECHNIQUE" value={w2.technique} color={w2.color} />
-                                    <StatBar label="SPEED" value={w2.speed} color={w2.color} />
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    )}
                 </div>
             </div>
 
+            {/* Fight Button - Fixed at bottom */}
             <Button
                 onClick={handleFight}
-                disabled={loading || !p1 || !p2 || buttonText === "FIGHT IN PROGRESS..."}
-                className="w-full h-16 text-xl bg-orange-600 hover:bg-orange-500 font-arcade tracking-widest mt-8 border-b-4 border-orange-800 active:border-b-0 active:mt-[34px] transition-all"
+                disabled={loading || !p1 || !p2 || buttonText === "NOKOTTA..."}
+                className="w-full h-12 text-lg font-[family-name:var(--font-dotgothic)] tracking-widest mt-2 bg-gradient-to-b from-[#FFD700] to-[#DAA520] text-black border-3 border-t-[#FFF8DC] border-l-[#FFF8DC] border-b-[#8B6914] border-r-[#8B6914] shadow-[0_3px_0_#5D4E0A] active:shadow-none active:translate-y-[2px] disabled:opacity-50"
             >
                 {buttonText}
             </Button>
+
+            {/* GBA Bottom Border */}
+            <div className="h-1.5 bg-gradient-to-r from-[#8B4513] via-[#CD853F] to-[#8B4513] -mx-3 -mb-3 mt-2" />
         </div>
     );
 }
 
 function StatBar({ label, value, color }: { label: string, value: number, color: string }) {
     return (
-        <div className="flex items-center gap-2">
-            <span className="text-[9px] w-14 font-bold text-neutral-500">{label}</span>
-            <div className="flex-1 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
-                <div
-                    className="h-full"
-                    style={{ width: `${Math.min(100, (value / 2.0) * 100)}%`, backgroundColor: `rgb(${color})` }}
-                />
+        <div className="flex items-center gap-1.5 mb-0.5">
+            <span className="text-[8px] w-6 text-gray-400">{label}</span>
+            <div className="flex-1 h-1.5 bg-black/50 overflow-hidden">
+                <div className="h-full" style={{ width: `${Math.min(100, (value / 2.0) * 100)}%`, backgroundColor: `rgb(${color})` }} />
             </div>
         </div>
     )

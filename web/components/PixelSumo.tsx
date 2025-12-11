@@ -7,12 +7,12 @@ interface Props {
     className?: string;
 }
 
-// Helper to darken/lighten hex/rgb would be nice, but we'll stick to simple logic or opacity layers
-const SHADOW_LAYER = "rgba(0,0,0,0.2)";
-const HIGHLIGHT_LAYER = "rgba(255,255,255,0.2)";
+// 32-bit GBA-quality avatar with enhanced detail
+const SHADOW_DARK = "rgba(0,0,0,0.35)";
+const SHADOW_MED = "rgba(0,0,0,0.2)";
+const HIGHLIGHT = "rgba(255,255,255,0.25)";
 
 export function PixelSumo({ seed = 0, color, size = 64, className }: Props) {
-    // Deterministic random helpers
     const seededRandom = (s: number) => {
         const x = Math.sin(s++) * 10000;
         return x - Math.floor(x);
@@ -21,129 +21,173 @@ export function PixelSumo({ seed = 0, color, size = 64, className }: Props) {
     const art = useMemo(() => {
         const rng = (offset: number) => seededRandom(seed + offset);
 
-        // --- TRAITS ---
-        const skinTones = ["#FFD0B0", "#E0AC69", "#8D5524", "#FFC3A0"];
+        // === TRAITS ===
+        const skinTones = ["#FFD5B8", "#E8B896", "#C69C6D", "#A67B5B", "#FFE0C0"];
         const skinBase = skinTones[Math.floor(rng(0) * skinTones.length)];
 
-        const hairStyles = ["TOPKNOT", "WILD", "BALD", "SAMURAI"];
+        const hairStyles = ["TOPKNOT", "WILD", "BALD", "OICHO", "SAMURAI"];
         const hairType = hairStyles[Math.floor(rng(1) * hairStyles.length)];
 
-        const bodyFat = rng(2); // 0.0 to 1.0
+        const bodyBuild = 0.5 + rng(2) * 0.5; // 0.5 to 1.0 (bulkiness)
 
-        // --- PIXEL GRID (24x24) ---
-        // 0=trans, 1=skin, 2=skin_shadow, 3=skin_highlight
+        // === 32x32 PIXEL GRID ===
+        // 0=transparent, 1=skin, 2=skin_shadow, 3=skin_highlight
         // 10=belt, 11=belt_shadow, 12=belt_highlight
-        // 20=hair, 21=hair_highlight
-        // 30=white (eyes), 31=pupil
-        const grid: number[][] = Array(24).fill(0).map(() => Array(24).fill(0));
+        // 20=hair_dark, 21=hair_light
+        // 30=eye_white, 31=pupil
+        const grid: number[][] = Array(32).fill(0).map(() => Array(32).fill(0));
 
-        // Draw helper
         const rect = (x: number, y: number, w: number, h: number, v: number) => {
             for (let i = Math.floor(x); i < Math.floor(x + w); i++)
                 for (let j = Math.floor(y); j < Math.floor(y + h); j++)
-                    if (i >= 0 && i < 24 && j >= 0 && j < 24) grid[j][i] = v;
-        }
+                    if (i >= 0 && i < 32 && j >= 0 && j < 32) grid[j][i] = v;
+        };
 
-        // --- BODY SHAPE ---
-        const cx = 12;
-        const wTorso = 10 + Math.floor(bodyFat * 6); // 10 to 16 pixels wide
-        const xTorso = cx - Math.floor(wTorso / 2);
+        // === BODY (Enhanced for 32-bit) ===
+        const centerX = 16;
+        const torsoWidth = Math.floor(12 + bodyBuild * 6); // 12-18 px
+        const torsoX = centerX - Math.floor(torsoWidth / 2);
 
-        // Legs (Thighs)
-        rect(xTorso, 16, Math.floor(wTorso / 2) - 1, 6, 1);
-        rect(xTorso + Math.floor(wTorso / 2) + 1, 16, Math.floor(wTorso / 2) - 1, 6, 1);
+        // Legs/Thighs
+        rect(torsoX + 1, 22, Math.floor(torsoWidth / 2) - 2, 8, 1);
+        rect(torsoX + Math.floor(torsoWidth / 2) + 1, 22, Math.floor(torsoWidth / 2) - 2, 8, 1);
 
-        // Torso Body
-        rect(xTorso, 8, wTorso, 10, 1);
-        // Round the shoulders
-        rect(xTorso - 1, 9, 1, 8, 1);
-        rect(xTorso + wTorso, 9, 1, 8, 1);
+        // Torso body (rounder belly)
+        rect(torsoX, 10, torsoWidth, 14, 1);
 
-        // Chest/Pecs shading
-        rect(cx - 3, 10, 2, 1, 2); // Shadow line
-        rect(cx + 1, 10, 2, 1, 2);
+        // Rounded shoulders
+        rect(torsoX - 1, 11, 1, 12, 1);
+        rect(torsoX + torsoWidth, 11, 1, 12, 1);
 
-        // Belly Button / Abs hint
-        rect(cx, 13, 1, 1, 2);
+        // Chest definition (pectoral shadows)
+        rect(centerX - 4, 13, 3, 1, 2);
+        rect(centerX + 1, 13, 3, 1, 2);
 
-        // --- HEAD ---
-        const wHead = 8;
-        const xHead = cx - 4;
-        rect(xHead, 4, wHead, 5, 1);
-        // Jaw rounding
-        rect(xHead + 1, 9, 6, 1, 1);
+        // Belly button
+        rect(centerX, 18, 1, 1, 2);
 
-        // --- FACE ---
-        // Eyes
-        rect(xHead + 1, 6, 2, 1, 30); // White
-        rect(xHead + 2, 6, 1, 1, 31); // Pupil
-        rect(xHead + 5, 6, 2, 1, 30); // White
-        rect(xHead + 5, 6, 1, 1, 31); // Pupil
+        // Belly curvature shadow
+        rect(torsoX + 1, 20, torsoWidth - 2, 1, 2);
 
-        // Eyebrows
-        rect(xHead + 1, 5, 2, 1, 20);
-        rect(xHead + 5, 5, 2, 1, 20);
+        // === HEAD (Larger for 32-bit) ===
+        const headWidth = 10;
+        const headX = centerX - 5;
 
-        // Cheeks/Nose
-        rect(cx - 1, 7, 2, 1, 2); // Nose shadow
+        // Main head
+        rect(headX, 4, headWidth, 7, 1);
 
-        // --- HAIR ---
+        // Jaw (rounder)
+        rect(headX + 1, 11, headWidth - 2, 1, 1);
+        rect(headX + 2, 12, headWidth - 4, 1, 1);
+
+        // Cheeks (rounded)
+        rect(headX - 1, 6, 1, 4, 1);
+        rect(headX + headWidth, 6, 1, 4, 1);
+
+        // === FACE ===
+        // Eyes (larger, more expressive)
+        rect(headX + 2, 7, 2, 2, 30);  // Left white
+        rect(headX + 3, 7, 1, 2, 31);  // Left pupil
+        rect(headX + 6, 7, 2, 2, 30);  // Right white
+        rect(headX + 6, 7, 1, 2, 31);  // Right pupil
+
+        // Eyebrows (thicker)
+        rect(headX + 1, 6, 3, 1, 20);
+        rect(headX + 6, 6, 3, 1, 20);
+
+        // Nose shadow
+        rect(centerX - 1, 9, 2, 2, 2);
+
+        // Subtle mouth
+        rect(centerX - 1, 11, 2, 1, 2);
+
+        // === HAIR STYLES ===
         if (hairType === "BALD") {
-            // maybe sideburns
-            rect(xHead, 5, 1, 2, 20);
-            rect(xHead + 7, 5, 1, 2, 20);
+            // Sideburns only
+            rect(headX, 6, 1, 3, 20);
+            rect(headX + headWidth - 1, 6, 1, 3, 20);
+            // Shine on bald head
+            rect(headX + 3, 4, 2, 1, 3);
         } else if (hairType === "TOPKNOT") {
-            rect(xHead, 3, 8, 2, 20); // Top
-            rect(cx - 1, 1, 2, 2, 20); // Oicho
-            rect(xHead, 4, 1, 3, 20); // Sides
-            rect(xHead + 7, 4, 1, 3, 20);
+            // Traditional topknot (mage)
+            rect(headX, 3, headWidth, 2, 20);
+            rect(centerX - 1, 1, 3, 2, 20);  // Knot
+            rect(centerX, 0, 1, 1, 20);       // Top of knot
+            rect(headX, 4, 1, 4, 20);         // Side
+            rect(headX + headWidth - 1, 4, 1, 4, 20);
         } else if (hairType === "WILD") {
-            rect(xHead - 1, 2, 10, 3, 20);
-            rect(xHead - 1, 3, 1, 5, 20);
-            rect(xHead + 8, 3, 1, 5, 20);
+            // Unruly hair
+            rect(headX - 1, 1, headWidth + 2, 4, 20);
+            rect(headX - 2, 3, 1, 5, 20);
+            rect(headX + headWidth + 1, 3, 1, 5, 20);
+            // Spiky bits
+            rect(headX + 2, 0, 1, 2, 20);
+            rect(headX + 7, 0, 1, 2, 20);
+        } else if (hairType === "OICHO") {
+            // Traditional sumo oicho-mage (ginkgo leaf shape)
+            rect(headX, 2, headWidth, 3, 20);
+            rect(centerX - 2, 0, 4, 3, 20);   // Fan top
+            rect(centerX - 1, -1, 2, 1, 20);   // Peak
+            rect(headX - 1, 4, 1, 4, 20);
+            rect(headX + headWidth, 4, 1, 4, 20);
         } else if (hairType === "SAMURAI") {
-            rect(xHead + 1, 2, 6, 2, 20);
-            rect(cx, 1, 1, 1, 20); // Knot
-            rect(xHead - 1, 4, 1, 4, 20); // Long sides
-            rect(xHead + 8, 4, 1, 4, 20);
+            // Slicked back with knot
+            rect(headX + 1, 2, headWidth - 2, 2, 20);
+            rect(centerX, 1, 1, 2, 20);      // Small knot
+            rect(headX - 1, 4, 1, 5, 20);    // Long sides
+            rect(headX + headWidth, 4, 1, 5, 20);
         }
 
-        // --- BELT (Mawashi) ---
-        const beltY = 14;
-        rect(xTorso - 1, beltY, wTorso + 2, 3, 10);
-        // Knot / Tsuna
-        rect(cx - 1, beltY + 1, 2, 4, 10); // Hang down
+        // === MAWASHI (Belt) - Enhanced ===
+        const beltY = 18;
+        rect(torsoX - 1, beltY, torsoWidth + 2, 5, 10);
 
-        // Belt Shading
-        rect(xTorso - 1, beltY + 2, wTorso + 2, 1, 11); // Bottom shadow
+        // Belt knot hanging down
+        rect(centerX - 2, beltY + 1, 4, 7, 10);
+        rect(centerX - 1, beltY + 7, 2, 2, 10);
 
-        // --- ARMS ---
-        // Left
-        rect(xTorso - 3, 9, 3, 6, 1);
-        rect(xTorso - 3, 14, 2, 1, 1); // Hand
-        // Right
-        rect(xTorso + wTorso, 9, 3, 6, 1);
-        rect(xTorso + wTorso + 1, 14, 2, 1, 1); // Hand
+        // Belt shading
+        rect(torsoX - 1, beltY + 4, torsoWidth + 2, 1, 11);
+        rect(centerX - 2, beltY + 6, 4, 1, 11);
 
-        // --- GENERAL SHADING (Light source top-left) ---
-        // Right side of body gets shadow
-        rect(xTorso + wTorso - 1, 9, 1, 8, 2);
+        // Belt highlight
+        rect(torsoX, beltY, torsoWidth, 1, 12);
 
-        // Left side gets highlight
-        rect(xTorso, 9, 1, 5, 3);
-        rect(xHead + 1, 4, 1, 2, 3); // Head Shine
+        // === ARMS (More detailed) ===
+        // Left arm
+        rect(torsoX - 4, 11, 4, 9, 1);
+        rect(torsoX - 4, 19, 3, 2, 1); // Hand
+        rect(torsoX - 4, 11, 1, 8, 3); // Highlight
+
+        // Right arm
+        rect(torsoX + torsoWidth, 11, 4, 9, 1);
+        rect(torsoX + torsoWidth + 1, 19, 3, 2, 1); // Hand
+        rect(torsoX + torsoWidth + 3, 11, 1, 8, 2); // Shadow
+
+        // === LIGHTING (Top-left light source) ===
+        // Right side body shadow
+        rect(torsoX + torsoWidth - 2, 11, 2, 11, 2);
+
+        // Left side highlight
+        rect(torsoX, 11, 2, 8, 3);
+
+        // Head shine
+        rect(headX + 2, 4, 2, 2, 3);
+
+        // Under-chin shadow
+        rect(headX + 1, 12, headWidth - 2, 1, 2);
 
         return { grid, skinBase };
     }, [seed]);
 
-    // Render SVG
+    // Render SVG with crisp pixels
     return (
         <svg
-            viewBox="0 0 24 24"
+            viewBox="0 0 32 32"
             width={size}
             height={size}
             className={className}
-            shapeRendering="crispEdges" // Keeps pixel art look even at high res
+            shapeRendering="crispEdges"
         >
             {art.grid.map((row, y) => row.map((val, x) => {
                 if (val === 0) return null;
@@ -152,31 +196,21 @@ export function PixelSumo({ seed = 0, color, size = 64, className }: Props) {
 
                 // Skin
                 if (val === 1) fill = art.skinBase;
-                if (val === 2) fill = SHADOW_LAYER; // Overlay shadow
-                if (val === 3) fill = HIGHLIGHT_LAYER; // Overlay highlight
+                if (val === 2) return <PixelStack key={`${x}-${y}`} x={x} y={y} base={art.skinBase} overlay={SHADOW_MED} />;
+                if (val === 3) return <PixelStack key={`${x}-${y}`} x={x} y={y} base={art.skinBase} overlay={HIGHLIGHT} />;
 
                 // Belt
                 if (val === 10) fill = `rgb(${color})`;
-                if (val === 11) fill = "rgba(0,0,0,0.3)"; // Belt shadow
-                if (val === 12) fill = "rgba(255,255,255,0.3)";
+                if (val === 11) return <PixelStack key={`${x}-${y}`} x={x} y={y} base={`rgb(${color})`} overlay={SHADOW_DARK} />;
+                if (val === 12) return <PixelStack key={`${x}-${y}`} x={x} y={y} base={`rgb(${color})`} overlay={HIGHLIGHT} />;
 
                 // Hair
                 if (val === 20) fill = "#1a1a1a";
-                if (val === 21) fill = "#404040";
+                if (val === 21) fill = "#3a3a3a";
 
                 // Face
                 if (val === 30) fill = "#ffffff";
                 if (val === 31) fill = "#000000";
-
-                // Compositing: If it's a shadow/highlight, we render the base FIRST then the overlay?
-                // Actually with SVG we can just render squares. 
-                // BUT, my logic above put "2" pixels REPLACING "1" pixels logic. 
-                // So "2" needs to be SkinBase w/ Shadow.
-
-                // Let's refine the render logic for overlays
-                if (val === 2) return <PixelStack key={`${x}-${y}`} x={x} y={y} base={art.skinBase} overlay={SHADOW_LAYER} />
-                if (val === 3) return <PixelStack key={`${x}-${y}`} x={x} y={y} base={art.skinBase} overlay={HIGHLIGHT_LAYER} />
-                if (val === 11) return <PixelStack key={`${x}-${y}`} x={x} y={y} base={`rgb(${color})`} overlay="rgba(0,0,0,0.3)" />
 
                 return (
                     <rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} fill={fill} />
@@ -192,5 +226,5 @@ function PixelStack({ x, y, base, overlay }: { x: number, y: number, base: strin
             <rect x={x} y={y} width={1} height={1} fill={base} />
             <rect x={x} y={y} width={1} height={1} fill={overlay} />
         </>
-    )
+    );
 }

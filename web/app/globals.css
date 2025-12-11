@@ -3,11 +3,24 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ===== GBA-INSPIRED SUMO DESIGN SYSTEM ===== */
+
 @theme inline {
+  /* Core Semantic Colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-dotgothic);
+
+  /* Sumo Palette */
+  --color-gold: var(--gold);
+  --color-crimson: var(--crimson);
+  --color-jade: var(--jade);
+  --color-tatami: var(--tatami);
+  --color-indigo: var(--indigo-deep);
+
+  /* Shadcn compatibility */
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -43,80 +56,355 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-:root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+/* ===== DARK MODE (GBA SUMO THEME) ===== */
+.dark {
+  /* GBA-Inspired Sumo Color Palette */
+  --gold: oklch(0.83 0.16 85);
+  /* Championship Gold */
+  --crimson: oklch(0.55 0.22 25);
+  /* Mawashi Belt Red */
+  --jade: oklch(0.60 0.12 155);
+  /* Bamboo/Jade Accent */
+  --tatami: oklch(0.45 0.06 70);
+  /* Tatami Tan (muted for dark) */
+  --indigo-deep: oklch(0.18 0.03 280);
+  /* Deep Indigo Background */
+
+  /* Core Colors */
+  --radius: 0.25rem;
+  /* Sharp GBA corners */
+  --background: var(--indigo-deep);
+  --foreground: oklch(0.95 0.01 85);
+  /* Warm off-white */
+
+  /* Cards & Panels */
+  --card: oklch(0.22 0.025 280);
+  /* Slightly lighter indigo */
+  --card-foreground: oklch(0.95 0.01 85);
+  --popover: oklch(0.20 0.03 280);
+  --popover-foreground: oklch(0.95 0.01 85);
+
+  /* Primary = Gold */
+  --primary: var(--gold);
+  --primary-foreground: oklch(0.15 0.02 85);
+
+  /* Secondary = Tatami/Wood */
+  --secondary: oklch(0.30 0.04 70);
+  --secondary-foreground: oklch(0.90 0.02 85);
+
+  /* Muted */
+  --muted: oklch(0.28 0.02 280);
+  --muted-foreground: oklch(0.65 0.02 280);
+
+  /* Accent = Jade */
+  --accent: var(--jade);
+  --accent-foreground: oklch(0.98 0 0);
+
+  /* Destructive = Crimson */
+  --destructive: var(--crimson);
+
+  /* UI Elements */
+  --border: oklch(0.35 0.03 280);
+  --input: oklch(0.25 0.02 280);
+  --ring: var(--gold);
+
+  /* Charts */
+  --chart-1: var(--gold);
+  --chart-2: var(--jade);
+  --chart-3: var(--crimson);
+  --chart-4: var(--tatami);
+  --chart-5: oklch(0.70 0.15 300);
+  /* Purple accent */
+
+  /* Sidebar */
+  --sidebar: oklch(0.15 0.02 280);
+  --sidebar-foreground: oklch(0.90 0.01 85);
+  --sidebar-primary: var(--gold);
+  --sidebar-primary-foreground: oklch(0.15 0 0);
+  --sidebar-accent: oklch(0.25 0.03 280);
+  --sidebar-accent-foreground: oklch(0.90 0.01 85);
+  --sidebar-border: oklch(0.30 0.02 280);
+  --sidebar-ring: var(--gold);
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+/* Light mode fallback (rarely used) */
+:root {
+  --radius: 0.25rem;
+  --gold: oklch(0.75 0.18 85);
+  --crimson: oklch(0.50 0.25 25);
+  --jade: oklch(0.55 0.15 155);
+  --tatami: oklch(0.78 0.08 85);
+  --indigo-deep: oklch(0.95 0.01 280);
+
+  --background: oklch(0.98 0.01 85);
+  --foreground: oklch(0.15 0.02 280);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.02 280);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0.02 280);
+  --primary: var(--gold);
+  --primary-foreground: oklch(0.15 0 0);
+  --secondary: var(--tatami);
+  --secondary-foreground: oklch(0.15 0.02 280);
+  --muted: oklch(0.95 0.01 85);
+  --muted-foreground: oklch(0.45 0.02 280);
+  --accent: var(--jade);
+  --accent-foreground: oklch(0.15 0 0);
+  --destructive: var(--crimson);
+  --border: oklch(0.90 0.02 85);
+  --input: oklch(0.92 0.01 85);
+  --ring: var(--gold);
+  --chart-1: var(--gold);
+  --chart-2: var(--jade);
+  --chart-3: var(--crimson);
+  --chart-4: var(--tatami);
+  --chart-5: oklch(0.60 0.20 300);
+  --sidebar: oklch(0.98 0.01 85);
+  --sidebar-foreground: oklch(0.15 0.02 280);
+  --sidebar-primary: var(--gold);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.95 0.01 85);
+  --sidebar-accent-foreground: oklch(0.15 0.02 280);
+  --sidebar-border: oklch(0.90 0.02 85);
+  --sidebar-ring: var(--gold);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ===== GBA-STYLE UTILITY CLASSES ===== */
+
+/* GBA Panel - 3D beveled border effect */
+.gba-panel {
+  background: var(--card);
+  border: 2px solid;
+  border-color: oklch(0.40 0.03 280) oklch(0.12 0.02 280) oklch(0.12 0.02 280) oklch(0.40 0.03 280);
+  box-shadow:
+    inset 1px 1px 0 oklch(0.50 0.02 280),
+    inset -1px -1px 0 oklch(0.08 0.01 280);
+}
+
+/* GBA Button - Pressed effect */
+.gba-btn {
+  background: linear-gradient(180deg, var(--gold) 0%, oklch(0.70 0.16 85) 100%);
+  border: 2px solid;
+  border-color: oklch(0.90 0.12 85) oklch(0.50 0.14 85) oklch(0.50 0.14 85) oklch(0.90 0.12 85);
+  color: oklch(0.15 0.02 85);
+  font-weight: 700;
+  text-shadow: 0 1px 0 oklch(0.95 0.05 85 / 0.5);
+  transition: all 0.05s ease-out;
+}
+
+.gba-btn:active {
+  border-color: oklch(0.50 0.14 85) oklch(0.90 0.12 85) oklch(0.90 0.12 85) oklch(0.50 0.14 85);
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 3px oklch(0.30 0.10 85 / 0.4);
+}
+
+.gba-btn:disabled {
+  background: oklch(0.40 0.03 280);
+  border-color: oklch(0.35 0.02 280);
+  color: oklch(0.55 0.02 280);
+  text-shadow: none;
+}
+
+/* Wooden Frame Border */
+.wood-frame {
+  border: 4px solid;
+  border-image: linear-gradient(135deg,
+      oklch(0.55 0.10 60) 0%,
+      oklch(0.40 0.08 55) 25%,
+      oklch(0.50 0.09 58) 50%,
+      oklch(0.35 0.07 52) 75%,
+      oklch(0.45 0.08 56) 100%) 1;
+}
+
+/* Tatami Texture Background */
+.tatami-bg {
+  background-color: var(--tatami);
+  background-image:
+    repeating-linear-gradient(0deg,
+      transparent,
+      transparent 2px,
+      oklch(0.48 0.05 70 / 0.3) 2px,
+      oklch(0.48 0.05 70 / 0.3) 4px);
+}
+
+/* Dohyo Ring Circle */
+.dohyo-ring {
+  border: 3px solid var(--tatami);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2px oklch(0.30 0.04 70),
+    inset 0 0 20px oklch(0.25 0.03 70 / 0.5);
+}
+
+/* Gold Text Glow */
+.text-gold-glow {
+  color: var(--gold);
+  text-shadow:
+    0 0 10px oklch(0.83 0.16 85 / 0.6),
+    0 0 20px oklch(0.83 0.16 85 / 0.3);
+}
+
+/* Crimson Text */
+.text-crimson {
+  color: var(--crimson);
+}
+
+/* Jade Accent */
+.text-jade {
+  color: var(--jade);
+}
+
+/* ===== JAPANESE AESTHETIC TEXTURES ===== */
+
+/* Wood Texture Background */
+.wood-texture {
+  background:
+    linear-gradient(180deg,
+      oklch(0.22 0.03 55 / 0.4) 0%,
+      oklch(0.18 0.02 280) 20%,
+      oklch(0.18 0.02 280) 80%,
+      oklch(0.22 0.03 55 / 0.4) 100%),
+    repeating-linear-gradient(90deg,
+      oklch(0.20 0.02 55 / 0.15) 0px,
+      transparent 1px,
+      transparent 8px);
+  background-color: var(--background);
+}
+
+/* Wood Border Top */
+.wood-border-top {
+  background: linear-gradient(180deg,
+      oklch(0.50 0.10 55) 0%,
+      oklch(0.35 0.08 50) 30%,
+      oklch(0.45 0.09 53) 50%,
+      oklch(0.30 0.07 48) 70%,
+      oklch(0.40 0.08 52) 100%);
+  border-bottom: 2px solid oklch(0.25 0.05 50);
+  box-shadow: 0 2px 4px oklch(0 0 0 / 0.4);
+}
+
+/* Wood Border Bottom */
+.wood-border-bottom {
+  background: linear-gradient(180deg,
+      oklch(0.40 0.08 52) 0%,
+      oklch(0.30 0.07 48) 30%,
+      oklch(0.45 0.09 53) 50%,
+      oklch(0.35 0.08 50) 70%,
+      oklch(0.50 0.10 55) 100%);
+  border-top: 2px solid oklch(0.55 0.08 55);
+  box-shadow: 0 -2px 4px oklch(0 0 0 / 0.2);
+}
+
+/* Tatami Accent (Subtle corner decoration) */
+.tatami-accent {
+  position: relative;
+}
+
+.tatami-accent::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg,
+      oklch(0.50 0.08 70) 0%,
+      oklch(0.45 0.06 65) 20%,
+      transparent 50%,
+      oklch(0.45 0.06 65) 80%,
+      oklch(0.50 0.08 70) 100%);
+  opacity: 0.6;
+}
+
+/* Sumo Avatar Frame - Traditional wooden frame */
+.sumo-avatar-frame {
+  background: linear-gradient(135deg,
+      oklch(0.45 0.08 55) 0%,
+      oklch(0.35 0.06 50) 50%,
+      oklch(0.40 0.07 53) 100%);
+  border: 2px solid;
+  border-color: oklch(0.55 0.08 58) oklch(0.28 0.05 48) oklch(0.28 0.05 48) oklch(0.55 0.08 58);
+  box-shadow:
+    inset 1px 1px 0 oklch(0.60 0.06 60),
+    inset -1px -1px 0 oklch(0.22 0.04 45),
+    2px 2px 4px oklch(0 0 0 / 0.3);
+}
+
+/* Rope/Tsuna decoration element */
+.tsuna-rope {
+  height: 6px;
+  background: repeating-linear-gradient(90deg,
+      oklch(0.95 0.02 85) 0px,
+      oklch(0.95 0.02 85) 4px,
+      oklch(0.85 0.04 85) 4px,
+      oklch(0.85 0.04 85) 8px);
+  border-radius: 3px;
+  box-shadow: 0 2px 3px oklch(0 0 0 / 0.3);
+}
+
+/* Salt pile decoration */
+.salt-pile {
+  width: 12px;
+  height: 8px;
+  background: radial-gradient(ellipse at center bottom,
+      oklch(0.95 0.02 85) 0%,
+      oklch(0.85 0.03 85) 60%,
+      oklch(0.75 0.04 80) 100%);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+}
+
+/* CRT Scanline Overlay (Subtle GBA LCD effect) */
+.lcd-overlay {
+  background:
+    linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%),
+    linear-gradient(90deg, rgba(255, 200, 100, 0.02), rgba(100, 255, 150, 0.01), rgba(100, 150, 255, 0.02));
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+}
+
+/* Banzuke-style rank decoration */
+.banzuke-rank {
+  background: linear-gradient(135deg,
+      oklch(0.90 0.10 85) 0%,
+      oklch(0.75 0.12 80) 100%);
+  border: 1px solid oklch(0.65 0.10 75);
+  color: oklch(0.20 0.05 50);
+  padding: 2px 8px;
+  font-weight: 700;
+}
+
+/* GBA-Style Menu Button */
+.gba-menu-btn {
+  background: linear-gradient(180deg, #3d2d5c 0%, #2a1f3d 100%);
+  border: 3px solid;
+  border-color: #5c4a7a #1a1428 #1a1428 #5c4a7a;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.05s ease-out;
+  box-shadow:
+    inset 1px 1px 0 #6b5a8a,
+    inset -1px -1px 0 #1a1020,
+    0 4px 0 #0d0a14;
+}
+
+.gba-menu-btn:hover {
+  background: linear-gradient(180deg, #4d3d6c 0%, #3a2f4d 100%);
+}
+
+.gba-menu-btn:active {
+  border-color: #1a1428 #5c4a7a #5c4a7a #1a1428;
+  box-shadow:
+    inset -1px -1px 0 #6b5a8a,
+    inset 1px 1px 0 #1a1020;
+  transform: translateY(2px);
 }
