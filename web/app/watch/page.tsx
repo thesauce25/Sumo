@@ -18,6 +18,7 @@ export default function WatchPage() {
     const [matchId, setMatchId] = useState<string | null>(null)
     const [matchState, setMatchState] = useState<MatchState | null>(null)
     const [waitingDots, setWaitingDots] = useState('')
+    const [connectionStatus, setConnectionStatus] = useState<string>('idle')
     const wsRef = useRef<WebSocket | null>(null)
     const pollRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -63,11 +64,19 @@ export default function WatchPage() {
     useEffect(() => {
         if (!matchId) return
 
-        const ws = new WebSocket(`${WS_BASE}/ws/${matchId}`)
+        console.log('[Watch] Connecting to WebSocket for match:', matchId)
+        setConnectionStatus('connecting')
+
+        const wsUrl = `${WS_BASE}/ws/${matchId}`
+        console.log('[Watch] WebSocket URL:', wsUrl)
+
+        const ws = new WebSocket(wsUrl)
         wsRef.current = ws
 
         ws.onopen = () => {
+            console.log('[Watch] WebSocket connected!')
             setConnected(true)
+            setConnectionStatus('connected')
             if (pollRef.current) clearInterval(pollRef.current)
         }
 
@@ -82,23 +91,36 @@ export default function WatchPage() {
                         setMatchId(null)
                         setMatchState(null)
                         setConnected(false)
+                        setConnectionStatus('idle')
                     }, 5000)
                 }
-            } catch {
-                console.error('Failed to parse match state')
+            } catch (e) {
+                console.error('[Watch] Failed to parse match state:', e)
             }
         }
 
-        ws.onclose = () => {
+        ws.onerror = (error) => {
+            console.error('[Watch] WebSocket error:', error)
+            setConnectionStatus('error')
+        }
+
+        ws.onclose = (event) => {
+            console.log('[Watch] WebSocket closed:', event.code, event.reason)
             setConnected(false)
             setMatchId(null)
             setMatchState(null)
+            setConnectionStatus('closed')
         }
 
         return () => {
             ws.close()
         }
     }, [matchId, WS_BASE])
+
+    // Debug: Log state changes
+    useEffect(() => {
+        console.log('[Watch] State:', { matchId, connected, connectionStatus, hasMatchState: !!matchState })
+    }, [matchId, connected, connectionStatus, matchState])
 
     // Render waiting screen
     if (!matchId || !connected) {
@@ -180,6 +202,20 @@ export default function WatchPage() {
                 }}>
                     This screen will automatically connect when a match starts from the Controller app.
                 </p>
+
+                {/* Debug info */}
+                <div style={{
+                    marginTop: 30,
+                    padding: 10,
+                    background: 'rgba(255,255,255,0.05)',
+                    borderRadius: 5,
+                    fontSize: 8,
+                    color: '#555'
+                }}>
+                    <p>Status: {connectionStatus}</p>
+                    <p>Match ID: {matchId || 'none'}</p>
+                    <p>Connected: {connected ? 'yes' : 'no'}</p>
+                </div>
             </div>
         )
     }

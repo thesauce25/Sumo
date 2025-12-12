@@ -125,6 +125,17 @@ class ActionRequest(BaseModel):
 async def root():
     return {"status": "online", "service": "Sumo Cloud Backend", "region": "global"}
 
+@app.get("/api/status")
+async def get_status():
+    """Returns the current game status for the controller to poll."""
+    if manager.matches:
+        # Check if any match is still running (not game_over)
+        for match_id, engine in manager.matches.items():
+            if not engine.game_over:
+                return {"status": "FIGHTING", "match_id": match_id}
+        return {"status": "IDLE"}
+    return {"status": "IDLE"}
+
 # --- Wrestler CRUD (Restored & Adapted for Firestore) ---
 
 @app.get("/api/wrestlers")
