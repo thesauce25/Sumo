@@ -1,8 +1,7 @@
 export const getApiUrl = () => {
-    if (typeof window !== 'undefined') {
-        return `${window.location.protocol}//${window.location.hostname}:5001/api`;
-    }
-    return 'http://localhost:5001/api';
+    // Default to the Cloud Run deployment
+    // In strict dev, you can use localhost, but user requested "online"
+    return process.env.NEXT_PUBLIC_API_URL || 'https://sumo-server-1056239062336.us-central1.run.app/api';
 };
 
 export interface Wrestler {
@@ -98,10 +97,11 @@ export const api = {
     },
 
     startFight: async (p1_id: number, p2_id: number) => {
-        const res = await fetch(`${getApiUrl()}/fight`, {
+        // Call the cloud match endpoint (creates a WebSocket-enabled match)
+        const res = await fetch(`${getApiUrl()}/match`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ p1_id, p2_id }),
+            body: JSON.stringify({ p1_id: String(p1_id), p2_id: String(p2_id) }),
         });
         if (!res.ok) throw new Error('Failed to start fight');
         return res.json();
