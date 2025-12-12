@@ -6,8 +6,8 @@ import { useEffect, useState, useRef } from 'react'
 const PIXEL_FONT = "'Press Start 2P', 'Courier New', monospace"
 
 interface MatchState {
-    p1: { x: number; y: number; name: string; color: string; health?: number }
-    p2: { x: number; y: number; name: string; color: string; health?: number }
+    p1: { x: number; y: number; name: string; custom_name?: string; color: string; health?: number }
+    p2: { x: number; y: number; name: string; custom_name?: string; color: string; health?: number }
     game_over: boolean
     winner?: string
     timestamp: number
@@ -186,7 +186,9 @@ export default function WatchPage() {
 
     // Render match view
     const RING_SIZE = 300
-    const RING_RADIUS = RING_SIZE / 2 - 20
+    // Engine uses 64x32 coordinate system, center at 32,16
+    const ENGINE_WIDTH = 64
+    const ENGINE_HEIGHT = 32
 
     return (
         <div style={{
@@ -226,12 +228,11 @@ export default function WatchPage() {
                     border: '4px solid #8b4513'
                 }} />
 
-                {/* Player 1 */}
                 {matchState?.p1 && (
                     <div style={{
                         position: 'absolute',
-                        left: `${(matchState.p1.x / 32) * RING_SIZE}px`,
-                        top: `${(matchState.p1.y / 32) * RING_SIZE}px`,
+                        left: `${(matchState.p1.x / ENGINE_WIDTH) * RING_SIZE}px`,
+                        top: `${(matchState.p1.y / ENGINE_HEIGHT) * RING_SIZE}px`,
                         transform: 'translate(-50%, -50%)',
                         width: 40,
                         height: 40,
@@ -248,12 +249,11 @@ export default function WatchPage() {
                     </div>
                 )}
 
-                {/* Player 2 */}
                 {matchState?.p2 && (
                     <div style={{
                         position: 'absolute',
-                        left: `${(matchState.p2.x / 32) * RING_SIZE}px`,
-                        top: `${(matchState.p2.y / 32) * RING_SIZE}px`,
+                        left: `${(matchState.p2.x / ENGINE_WIDTH) * RING_SIZE}px`,
+                        top: `${(matchState.p2.y / ENGINE_HEIGHT) * RING_SIZE}px`,
                         transform: 'translate(-50%, -50%)',
                         width: 40,
                         height: 40,
@@ -279,11 +279,11 @@ export default function WatchPage() {
                 marginTop: 20
             }}>
                 <span style={{ fontSize: 12, color: `rgb(${matchState?.p1?.color || '255,255,255'})` }}>
-                    {matchState?.p1?.name || 'P1'}
+                    {matchState?.p1?.custom_name || matchState?.p1?.name || 'P1'}
                 </span>
                 <span style={{ fontSize: 10, color: '#888' }}>VS</span>
                 <span style={{ fontSize: 12, color: `rgb(${matchState?.p2?.color || '255,255,255'})` }}>
-                    {matchState?.p2?.name || 'P2'}
+                    {matchState?.p2?.custom_name || matchState?.p2?.name || 'P2'}
                 </span>
             </div>
 

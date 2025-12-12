@@ -41,9 +41,14 @@ class SumoEngine:
         }
         
     def set_wrestlers(self, p1_data: Dict, p2_data: Dict):
-        """Initialize wrestlers from DB data"""
-        self.p1.update(p1_data)
-        self.p2.update(p2_data)
+        """Initialize wrestlers from DB data without overwriting physics state"""
+        # Only copy non-physics attributes from DB
+        safe_keys = ['id', 'name', 'custom_name', 'color', 'strength', 'technique', 'speed', 'stable']
+        for key in safe_keys:
+            if key in p1_data:
+                self.p1[key] = p1_data[key]
+            if key in p2_data:
+                self.p2[key] = p2_data[key]
 
     def handle_input(self, player_id: str, action: str):
         """Handle control inputs (processed on next tick)"""
