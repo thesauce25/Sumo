@@ -2,22 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { api, Skill, SkillBranch, WrestlerSkillsResponse, Wrestler } from "@/lib/api";
-
-const RANKS_UI = [
-    { name: "Jonokuchi", xp: 0, color: "#a0a0a0" },
-    { name: "Jonidan", xp: 200, color: "#c0c0c0" },
-    { name: "Sandanme", xp: 600, color: "#6fa8dc" },
-    { name: "Makushita", xp: 1200, color: "#3d85c6" },
-    { name: "Juryo", xp: 2000, color: "#93c47d" },
-    { name: "Maegashira", xp: 3000, color: "#6aa84f" },
-    { name: "Komusubi", xp: 4500, color: "#e69138" },
-    { name: "Sekiwake", xp: 6500, color: "#e06666" },
-    { name: "Ozeki", xp: 9000, color: "#cc0000" },
-    { name: "Yokozuna", xp: 12000, color: "#f1c232" },
-];
+import { WRESTLER_RANKS } from "@/lib/constants";
 
 interface SkillTreeProps {
-    wrestlerId: number;
+    wrestlerId: string;
     wrestlerName: string;
     onClose: () => void;
 }
@@ -203,7 +191,7 @@ export function SkillTree({ wrestlerId, wrestlerName, onClose }: SkillTreeProps)
                 <div className="bg-[#151020] px-4 py-3 border-b border-gray-800">
                     <div className="flex justify-between items-end mb-2">
                         <div className="flex items-center gap-2">
-                            <span className="font-[family-name:var(--font-dotgothic)] text-xl" style={{ color: RANKS_UI.find(r => r.name === wrestler.rank_name)?.color || 'white' }}>
+                            <span className="font-[family-name:var(--font-dotgothic)] text-xl" style={{ color: WRESTLER_RANKS.find(r => r.name === wrestler.rank_name)?.color || 'white' }}>
                                 {wrestler.rank_name?.toUpperCase()}
                             </span>
                             {wrestler.fighting_style && (
@@ -219,9 +207,9 @@ export function SkillTree({ wrestlerId, wrestlerName, onClose }: SkillTreeProps)
                     {/* XP BAR */}
                     <div className="h-2 bg-gray-800 rounded-full overflow-hidden relative">
                         {(() => {
-                            const curRank = RANKS_UI.findIndex(r => r.name === wrestler.rank_name) || 0;
-                            const nextRank = RANKS_UI[curRank + 1];
-                            const curRankXp = RANKS_UI[curRank]?.xp || 0;
+                            const curRank = WRESTLER_RANKS.findIndex(r => r.name === wrestler.rank_name) || 0;
+                            const nextRank = WRESTLER_RANKS[curRank + 1];
+                            const curRankXp = WRESTLER_RANKS[curRank]?.xp || 0;
                             const nextRankXp = nextRank?.xp || curRankXp * 1.5; // Fallback
                             const progress = Math.min(100, Math.max(0, ((wrestler.xp || 0) - curRankXp) / (nextRankXp - curRankXp) * 100));
                             return <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${progress}%` }}></div>

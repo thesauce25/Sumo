@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { api, Wrestler, getApiUrl } from "@/lib/api";
+import { WRESTLER_POLL_INTERVAL_MS, STATUS_POLL_INTERVAL_MS, AVATAR_SIZE_CONTROLLER, STAT_BAR_MAX_VALUE, BUTTON_TEXT, ButtonTextValue } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { PixelSumo } from "@/components/PixelSumo";
@@ -12,7 +13,7 @@ export default function ControllerPage() {
     const [p1, setP1] = useState<string>("");
     const [p2, setP2] = useState<string>("");
     const [loading, setLoading] = useState(false);
-    const [buttonText, setButtonText] = useState("TACHIAI!");
+    const [buttonText, setButtonText] = useState<ButtonTextValue>(BUTTON_TEXT.TACHIAI);
 
     const fetchWrestlers = useCallback(() => {
         api.getWrestlers().then(data => {
@@ -26,7 +27,7 @@ export default function ControllerPage() {
 
     useEffect(() => {
         fetchWrestlers();
-        const pollInterval = setInterval(fetchWrestlers, 5000);
+        const pollInterval = setInterval(fetchWrestlers, WRESTLER_POLL_INTERVAL_MS);
         return () => clearInterval(pollInterval);
     }, [fetchWrestlers]);
 
@@ -37,23 +38,23 @@ export default function ControllerPage() {
                 .then(data => {
                     if (data.status === "FIGHTING") {
                         setLoading(true);
-                        setButtonText("NOKOTTA...");
-                    } else if (buttonText === "NOKOTTA...") {
+                        setButtonText(BUTTON_TEXT.NOKOTTA);
+                    } else if (buttonText === BUTTON_TEXT.NOKOTTA) {
                         setLoading(false);
-                        setButtonText("TACHIAI!");
+                        setButtonText(BUTTON_TEXT.TACHIAI);
                         fetchWrestlers();
                     }
                 })
                 .catch(err => console.error(err));
-        }, 1000);
+        }, STATUS_POLL_INTERVAL_MS);
         return () => clearInterval(interval);
     }, [buttonText, fetchWrestlers]);
 
     const handleFight = async () => {
         if (!p1 || !p2) return;
         setLoading(true);
-        setButtonText("HAKKEYOI...");
-        await api.startFight(parseInt(p1), parseInt(p2));
+        setButtonText(BUTTON_TEXT.HAKKEYOI);
+        await api.startFight(p1, p2);
     };
 
     const getWrestler = (idStr: string) => wrestlers.find(w => w.id.toString() === idStr);
@@ -95,17 +96,18 @@ export default function ControllerPage() {
                     {w1 && (
                         <div className="mt-2 flex gap-3 items-center relative">
                             {/* KIAI OVERLAY */}
-                            {buttonText === "NOKOTTA..." && (
+                            {buttonText === BUTTON_TEXT.NOKOTTA && (
                                 <button
                                     onClick={() => api.fightAction(w1.id, 'kiai')}
-                                    className="absolute inset-0 z-10 bg-red-600/80 hover:bg-red-500 text-white font-[family-name:var(--font-dotgothic)] text-2xl animate-pulse border-2 border-yellow-400 flex items-center justify-center uppercase shadow-lg"
+                                    className="absolute inset-0 z-10 bg-red-600 active:bg-red-700 text-white font-[family-name:var(--font-dotgothic)] text-2xl animate-pulse border-4 border-yellow-400 flex flex-col items-center justify-center shadow-lg"
                                 >
-                                    KIAI!
+                                    <span>💥</span>
+                                    <span>PUSH!</span>
                                 </button>
                             )}
 
                             <div className="bg-[#1a1428] p-1.5 border-2 border-[#3d2d5c]">
-                                <PixelSumo seed={w1.avatar_seed} color={w1.color} size={44} />
+                                <PixelSumo seed={w1.avatar_seed} color={w1.color} size={AVATAR_SIZE_CONTROLLER} />
                             </div>
                             <div className="flex-1">
                                 <div className="flex items-center gap-1 mb-1.5">
@@ -148,17 +150,18 @@ export default function ControllerPage() {
                     {w2 && (
                         <div className="mt-2 flex gap-3 items-center relative">
                             {/* KIAI OVERLAY */}
-                            {buttonText === "NOKOTTA..." && (
+                            {buttonText === BUTTON_TEXT.NOKOTTA && (
                                 <button
                                     onClick={() => api.fightAction(w2.id, 'kiai')}
-                                    className="absolute inset-0 z-10 bg-blue-600/80 hover:bg-blue-500 text-white font-[family-name:var(--font-dotgothic)] text-2xl animate-pulse border-2 border-yellow-400 flex items-center justify-center uppercase shadow-lg"
+                                    className="absolute inset-0 z-10 bg-blue-600 active:bg-blue-700 text-white font-[family-name:var(--font-dotgothic)] text-2xl animate-pulse border-4 border-yellow-400 flex flex-col items-center justify-center shadow-lg"
                                 >
-                                    KIAI!
+                                    <span>💥</span>
+                                    <span>PUSH!</span>
                                 </button>
                             )}
 
                             <div className="bg-[#1a1428] p-1.5 border-2 border-[#3d2d5c]">
-                                <PixelSumo seed={w2.avatar_seed} color={w2.color} size={44} />
+                                <PixelSumo seed={w2.avatar_seed} color={w2.color} size={AVATAR_SIZE_CONTROLLER} />
                             </div>
                             <div className="flex-1">
                                 <div className="flex items-center gap-1 mb-1.5">
@@ -180,7 +183,7 @@ export default function ControllerPage() {
             {/* Fight Button - PROMINENT */}
             <Button
                 onClick={handleFight}
-                disabled={loading || !p1 || !p2 || buttonText === "NOKOTTA..."}
+                disabled={loading || !p1 || !p2 || buttonText === BUTTON_TEXT.NOKOTTA}
                 className="w-full h-16 text-xl font-[family-name:var(--font-dotgothic)] tracking-widest mt-3 bg-gradient-to-b from-[#FFD700] to-[#DAA520] text-black border-4 border-t-[#FFF8DC] border-l-[#FFF8DC] border-b-[#8B6914] border-r-[#8B6914] shadow-[0_4px_0_#5D4E0A] active:shadow-none active:translate-y-[3px] disabled:opacity-50 animate-pulse"
             >
                 {buttonText}
@@ -197,7 +200,7 @@ function StatBar({ label, value, color }: { label: string, value: number, color:
         <div className="flex items-center gap-1.5 mb-0.5">
             <span className="text-[8px] w-6 text-gray-400">{label}</span>
             <div className="flex-1 h-1.5 bg-black/50 overflow-hidden">
-                <div className="h-full" style={{ width: `${Math.min(100, (value / 2.0) * 100)}%`, backgroundColor: `rgb(${color})` }} />
+                <div className="h-full" style={{ width: `${Math.min(100, (value / STAT_BAR_MAX_VALUE) * 100)}%`, backgroundColor: `rgb(${color})` }} />
             </div>
         </div>
     )

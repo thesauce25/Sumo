@@ -20,7 +20,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export default function WrestlerView({ id }: { id: number }) {
+export default function WrestlerView({ id }: { id: string }) {
     const [wrestler, setWrestler] = useState<Wrestler | null>(null);
     const [history, setHistory] = useState<MatchRecord[]>([]);
     const [showAlert, setShowAlert] = useState(false);
@@ -28,7 +28,7 @@ export default function WrestlerView({ id }: { id: number }) {
     const router = useRouter();
 
     const refresh = () => {
-        if (isNaN(id)) return;
+        if (!id) return;
         api.getWrestler(id).then(setWrestler).catch(() => router.push("/profiles"));
         api.getHistory(id).then(setHistory);
     };

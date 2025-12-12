@@ -5,7 +5,7 @@ export const getApiUrl = () => {
 };
 
 export interface Wrestler {
-    id: number;
+    id: string;
     name: string;
     custom_name?: string;
     stable: string;
@@ -74,13 +74,13 @@ export const api = {
         return res.json();
     },
 
-    getWrestler: async (id: number): Promise<Wrestler> => {
+    getWrestler: async (id: string): Promise<Wrestler> => {
         const res = await fetch(`${getApiUrl()}/wrestlers/${id}`, { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to fetch wrestler');
         return res.json();
     },
 
-    deleteWrestler: async (id: number) => {
+    deleteWrestler: async (id: string) => {
         const res = await fetch(`${getApiUrl()}/wrestlers/${id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Failed to delete wrestler');
         return res.json();
@@ -96,18 +96,18 @@ export const api = {
         return res.json();
     },
 
-    startFight: async (p1_id: number, p2_id: number) => {
+    startFight: async (p1_id: string, p2_id: string) => {
         // Call the cloud match endpoint (creates a WebSocket-enabled match)
         const res = await fetch(`${getApiUrl()}/match`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ p1_id: String(p1_id), p2_id: String(p2_id) }),
+            body: JSON.stringify({ p1_id, p2_id }),
         });
         if (!res.ok) throw new Error('Failed to start fight');
         return res.json();
     },
 
-    getHistory: async (wrestlerId?: number): Promise<MatchRecord[]> => {
+    getHistory: async (wrestlerId?: string): Promise<MatchRecord[]> => {
         const url = wrestlerId ? `${getApiUrl()}/history?wrestler_id=${wrestlerId}` : `${getApiUrl()}/history`;
         const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to fetch history');
@@ -121,13 +121,13 @@ export const api = {
         return res.json();
     },
 
-    getWrestlerSkills: async (wrestlerId: number): Promise<WrestlerSkillsResponse> => {
+    getWrestlerSkills: async (wrestlerId: string): Promise<WrestlerSkillsResponse> => {
         const res = await fetch(`${getApiUrl()}/wrestlers/${wrestlerId}/skills`, { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to fetch wrestler skills');
         return res.json();
     },
 
-    unlockSkill: async (wrestlerId: number, skillId: string): Promise<{ success: boolean; skill_id: string; cost: number }> => {
+    unlockSkill: async (wrestlerId: string, skillId: string): Promise<{ success: boolean; skill_id: string; cost: number }> => {
         const res = await fetch(`${getApiUrl()}/wrestlers/${wrestlerId}/skills/${skillId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
@@ -139,7 +139,7 @@ export const api = {
         return res.json();
     },
 
-    fightAction: async (wrestlerId: number, action: 'kiai') => {
+    fightAction: async (wrestlerId: string, action: 'kiai') => {
         const res = await fetch(`${getApiUrl()}/fight/action`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

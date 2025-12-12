@@ -59,7 +59,7 @@ export default function ProfilesPage() {
         }
     };
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = async (id: string) => {
         await api.deleteWrestler(id);
         refresh();
     };

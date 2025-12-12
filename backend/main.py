@@ -20,6 +20,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- Constants ---
+MATCH_STALE_TIMEOUT_SECONDS = 300  # 5 minutes - matches older than this without activity are dead
+
 # --- In-Memory State Manager ---
 class MatchManager:
     def __init__(self):
@@ -27,8 +30,43 @@ class MatchManager:
         self.matches: Dict[str, SumoEngine] = {}
         # Maps match_id -> List of WebSockets
         self.connections: Dict[str, List[WebSocket]] = {}
+        # Maps match_id -> last activity timestamp
+        self.match_timestamps: Dict[str, float] = {}
+
+    def is_match_stale(self, match_id: str) -> bool:
+        """Check if a match is stale (no activity for too long)"""
+        if match_id not in self.match_timestamps:
+            return True
+        age = time.time() - self.match_timestamps[match_id]
+        return age > MATCH_STALE_TIMEOUT_SECONDS
+
+    def cleanup_stale_matches(self):
+        """Remove any stale matches"""
+        stale_ids = [mid for mid in self.matches if self.is_match_stale(mid)]
+        for match_id in stale_ids:
+            print(f"[MatchManager] Cleaning up stale match: {match_id}")
+            if match_id in self.matches:
+                del self.matches[match_id]
+            if match_id in self.connections:
+                del self.connections[match_id]
+            if match_id in self.match_timestamps:
+                del self.match_timestamps[match_id]
+
+    def clear_all_matches(self):
+        """Clear all existing matches (MVP: only one match at a time)"""
+        for match_id in list(self.matches.keys()):
+            if match_id in self.matches:
+                del self.matches[match_id]
+            if match_id in self.connections:
+                del self.connections[match_id]
+            if match_id in self.match_timestamps:
+                del self.match_timestamps[match_id]
+        print(f"[MatchManager] Cleared all matches. Starting fresh.")
 
     async def create_match(self, match_id: str, p1_id: str, p2_id: str):
+        # MVP: Clear any existing matches before starting new one
+        self.clear_all_matches()
+        
         # 1. Fetch REAL Data from Firestore
         db = get_db()
         p1_ref = db.collection('wrestlers').document(p1_id).get()
@@ -48,6 +86,7 @@ class MatchManager:
         engine.set_wrestlers(p1_data, p2_data)
         self.matches[match_id] = engine
         self.connections[match_id] = []
+        self.match_timestamps[match_id] = time.time()  # Track creation time
         
         # Start the Game Loop for this match
         asyncio.create_task(self.game_loop(match_id))
@@ -58,6 +97,14 @@ class MatchManager:
         if match_id not in self.connections:
             self.connections[match_id] = []
         self.connections[match_id].append(websocket)
+        
+        # Send immediate state snapshot so client doesn't wait for next tick
+        if match_id in self.matches:
+            try:
+                state = self.matches[match_id].get_state()
+                await websocket.send_json(state)
+            except:
+                pass
 
     def disconnect(self, websocket: WebSocket, match_id: str):
         if match_id in self.connections:
@@ -83,6 +130,9 @@ class MatchManager:
             # Tick Physics
             state = engine.tick(1/60.0)
             
+            # Update activity timestamp
+            self.match_timestamps[match_id] = time.time()
+            
             # Broadcast State
             await self.broadcast(match_id, state)
             
@@ -104,7 +154,10 @@ class MatchManager:
         })
         
         # Cleanup
-        del self.matches[match_id]
+        if match_id in self.matches:
+            del self.matches[match_id]
+        if match_id in self.match_timestamps:
+            del self.match_timestamps[match_id]
 
 manager = MatchManager()
 
@@ -128,6 +181,9 @@ async def root():
 @app.get("/api/status")
 async def get_status():
     """Returns the current game status for the controller to poll."""
+    # Auto-cleanup stale matches first
+    manager.cleanup_stale_matches()
+    
     if manager.matches:
         # Check if any match is still running (not game_over)
         for match_id, engine in manager.matches.items():
@@ -163,11 +219,22 @@ async def get_wrestler(w_id: str):
 @app.get("/api/matches/active")
 async def get_active_match():
     """Returns the first active match ID for TV spectators to auto-connect."""
+    # Auto-cleanup stale matches first
+    manager.cleanup_stale_matches()
+    
     if manager.matches:
-        # Return first active match
-        match_id = next(iter(manager.matches.keys()))
-        return {"match_id": match_id, "status": "active"}
+        # Return first active match that isn't stale
+        for match_id in manager.matches.keys():
+            if not manager.is_match_stale(match_id):
+                return {"match_id": match_id, "status": "active"}
     return {"match_id": None, "status": "idle"}
+
+@app.post("/api/matches/clear")
+async def clear_all_matches():
+    """Admin endpoint to force clear all matches. Useful for resetting stuck state."""
+    count = len(manager.matches)
+    manager.clear_all_matches()
+    return {"success": True, "cleared": count, "message": "All matches cleared"}
 
 @app.post("/api/wrestlers")
 async def create_wrestler(w: dict):
@@ -210,6 +277,118 @@ async def create_wrestler(w: dict):
         print(f"Error creating wrestler: {e}")
         # Return error details for debugging (disable in strict prod)
         raise HTTPException(status_code=500, detail=f"Database Error: {str(e)}")
+
+@app.delete("/api/wrestlers/{w_id}")
+async def delete_wrestler(w_id: str):
+    """Delete a wrestler by ID."""
+    db = get_db()
+    doc = db.collection('wrestlers').document(w_id).get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Wrestler not found")
+    db.collection('wrestlers').document(w_id).delete()
+    return {"success": True, "id": w_id}
+
+@app.get("/api/history")
+async def get_history(wrestler_id: str = None):
+    """Get match history, optionally filtered by wrestler ID."""
+    db = get_db()
+    # Note: In a full implementation, you'd query a 'matches' collection
+    # For now, return empty array as placeholder
+    return []
+
+@app.get("/api/skills")
+async def get_skills():
+    """Get the skill tree definition."""
+    # Return a basic skill tree structure
+    return {
+        "strength": {
+            "name": "Strength",
+            "jp": "力",
+            "description": "Raw pushing power",
+            "color": "220,50,50",
+            "skills": [
+                {"id": "str_1", "name": "Iron Grip", "jp": "鉄握", "desc": "+10% push force", "tier": 1, "cost": 1, "effect": {"strength": 0.1}},
+                {"id": "str_2", "name": "Mountain Push", "jp": "山押し", "desc": "+15% push force", "tier": 2, "cost": 2, "effect": {"strength": 0.15}}
+            ]
+        },
+        "technique": {
+            "name": "Technique", 
+            "jp": "技",
+            "description": "Grappling skill",
+            "color": "50,150,220",
+            "skills": [
+                {"id": "tech_1", "name": "Quick Hands", "jp": "速手", "desc": "+10% grab speed", "tier": 1, "cost": 1, "effect": {"technique": 0.1}},
+                {"id": "tech_2", "name": "Belt Master", "jp": "帯師", "desc": "+15% grab success", "tier": 2, "cost": 2, "effect": {"technique": 0.15}}
+            ]
+        },
+        "speed": {
+            "name": "Speed",
+            "jp": "速",
+            "description": "Movement and reaction",
+            "color": "50,220,100",
+            "skills": [
+                {"id": "spd_1", "name": "Quick Step", "jp": "速歩", "desc": "+10% movement", "tier": 1, "cost": 1, "effect": {"speed": 0.1}},
+                {"id": "spd_2", "name": "Lightning Dash", "jp": "雷走", "desc": "+15% movement", "tier": 2, "cost": 2, "effect": {"speed": 0.15}}
+            ]
+        }
+    }
+
+@app.get("/api/wrestlers/{w_id}/skills")
+async def get_wrestler_skills(w_id: str):
+    """Get a wrestler's unlocked skills."""
+    db = get_db()
+    doc = db.collection('wrestlers').document(w_id).get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Wrestler not found")
+    data = doc.to_dict()
+    return {
+        "skill_points": data.get("skill_points", 0),
+        "unlocked_skills": data.get("unlocked_skills", []),
+        "total_bonuses": data.get("total_bonuses", {})
+    }
+
+@app.post("/api/wrestlers/{w_id}/skills/{skill_id}")
+async def unlock_skill(w_id: str, skill_id: str):
+    """Unlock a skill for a wrestler."""
+    db = get_db()
+    doc_ref = db.collection('wrestlers').document(w_id)
+    doc = doc_ref.get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Wrestler not found")
+    
+    data = doc.to_dict()
+    skill_points = data.get("skill_points", 0)
+    
+    # Simple cost of 1 for now
+    cost = 1
+    if skill_points < cost:
+        raise HTTPException(status_code=400, detail="Not enough skill points")
+    
+    unlocked = data.get("unlocked_skills", [])
+    if skill_id in [s.get("skill_id") if isinstance(s, dict) else s for s in unlocked]:
+        raise HTTPException(status_code=400, detail="Skill already unlocked")
+    
+    unlocked.append({"skill_id": skill_id, "unlocked_at": str(time.time())})
+    doc_ref.update({
+        "skill_points": skill_points - cost,
+        "unlocked_skills": unlocked
+    })
+    
+    return {"success": True, "skill_id": skill_id, "cost": cost}
+
+@app.post("/api/fight/action")
+async def fight_action(req: dict):
+    """Handle in-fight actions like KIAI."""
+    wrestler_id = req.get("wrestler_id")
+    action = req.get("action")
+    
+    # Find the active match with this wrestler
+    for match_id, engine in manager.matches.items():
+        if str(engine.p1.get('id')) == str(wrestler_id) or str(engine.p2.get('id')) == str(wrestler_id):
+            engine.handle_input(str(wrestler_id), action.upper() if action else "PUSH")
+            return {"success": True, "match_id": match_id, "action": action}
+    
+    return {"success": False, "error": "No active match for this wrestler"}
 
 @app.post("/api/match")
 async def start_match(req: CreateMatchRequest):

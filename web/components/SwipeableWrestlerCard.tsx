@@ -20,7 +20,7 @@ import { PixelSumo } from "@/components/PixelSumo";
 
 interface Props {
     wrestler: Wrestler;
-    onDelete: (id: number) => void;
+    onDelete: (id: string) => void;
 }
 
 export function SwipeableWrestlerCard({ wrestler, onDelete }: Props) {
