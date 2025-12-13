@@ -6,7 +6,7 @@ import { WRESTLER_POLL_INTERVAL_MS, STATUS_POLL_INTERVAL_MS, AVATAR_SIZE_CONTROL
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { PixelSumo } from "@/components/PixelSumo";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Gamepad2 } from "lucide-react";
 
 export default function ControllerPage() {
     const [wrestlers, setWrestlers] = useState<Wrestler[]>([]);
@@ -14,6 +14,7 @@ export default function ControllerPage() {
     const [p2, setP2] = useState<string>("");
     const [loading, setLoading] = useState(false);
     const [buttonText, setButtonText] = useState<ButtonTextValue>(BUTTON_TEXT.TACHIAI);
+    const [soloMode, setSoloMode] = useState(false); // Solo mode: control both wrestlers from one device
 
     const fetchWrestlers = useCallback(() => {
         api.getWrestlers().then(data => {
@@ -73,19 +74,31 @@ export default function ControllerPage() {
                         <ArrowLeft className="h-4 w-4" />
                     </Button>
                 </Link>
-                <h1 className="font-[family-name:var(--font-dotgothic)] text-lg text-[#FFD700] [text-shadow:_1px_1px_0_#000]">TACHIAI</h1>
+                <h1 className="font-[family-name:var(--font-dotgothic)] text-lg text-[#FFD700] [text-shadow:_1px_1px_0_#000] flex-1">TACHIAI</h1>
+
+                {/* Solo Mode Toggle */}
+                <button
+                    onClick={() => setSoloMode(!soloMode)}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded border-2 text-[10px] font-[family-name:var(--font-dotgothic)] transition-all ${soloMode
+                        ? 'bg-[#FFD700] text-black border-[#FFF8DC]'
+                        : 'bg-[#2a1f3d] text-gray-400 border-[#3d2d5c] hover:border-[#FFD700]'
+                        }`}
+                >
+                    <Gamepad2 className="h-3 w-3" />
+                    <span>SOLO</span>
+                </button>
             </header>
 
             {/* Main Content - Flex to fill space */}
             <div className="flex-1 flex flex-col justify-center gap-6 min-h-0">
-                {/* EAST Fighter */}
+                {/* P1 - WEST Fighter (Top) */}
                 <div className="gba-menu-btn p-3 relative">
-                    <div className="absolute top-1 right-2 text-2xl text-[#DC143C] opacity-40 font-[family-name:var(--font-dotgothic)]">東</div>
-                    <p className="text-[10px] text-[#87CEEB] font-[family-name:var(--font-dotgothic)] mb-1">EAST</p>
+                    <div className="absolute top-1 right-2 text-2xl text-[#50C878] opacity-40 font-[family-name:var(--font-dotgothic)]">西</div>
+                    <p className="text-[10px] text-[#87CEEB] font-[family-name:var(--font-dotgothic)] mb-1">WEST</p>
                     <select
                         value={p1}
                         onChange={(e) => setP1(e.target.value)}
-                        className="w-full bg-[#2a1f3d] text-white p-2 text-sm font-[family-name:var(--font-dotgothic)] border-2 border-[#3d2d5c] focus:border-[#FFD700] outline-none"
+                        className="w-full bg-[#2a1f3d] text-white p-2 text-sm font-[family-name:var(--font-dotgothic)] border-2 border-[#3d2d5c] focus:border-[#50C878] outline-none"
                     >
                         {wrestlers.map(w => (
                             <option key={w.id} value={w.id}>
@@ -95,14 +108,16 @@ export default function ControllerPage() {
                     </select>
                     {w1 && (
                         <div className="mt-2 flex gap-3 items-center relative">
-                            {/* KIAI OVERLAY */}
+                            {/* KIAI OVERLAY - Shows during fight (NOKOTTA state) */}
                             {buttonText === BUTTON_TEXT.NOKOTTA && (
                                 <button
                                     onClick={() => api.fightAction(w1.id, 'kiai')}
-                                    className="absolute inset-0 z-10 bg-red-600 active:bg-red-700 text-white font-[family-name:var(--font-dotgothic)] text-2xl animate-pulse border-4 border-yellow-400 flex flex-col items-center justify-center shadow-lg"
+                                    style={{ backgroundColor: `rgb(${w1.color})` }}
+                                    className="absolute inset-0 z-10 text-white font-[family-name:var(--font-dotgothic)] text-2xl animate-pulse border-4 border-yellow-400 flex flex-col items-center justify-center shadow-lg active:brightness-90 transition-all filter"
                                 >
                                     <span>💥</span>
                                     <span>PUSH!</span>
+                                    {soloMode && <span className="text-[10px] mt-1 opacity-70">WEST</span>}
                                 </button>
                             )}
 
@@ -132,14 +147,14 @@ export default function ControllerPage() {
                     </div>
                 </div>
 
-                {/* WEST Fighter */}
+                {/* P2 - EAST Fighter (Bottom) */}
                 <div className="gba-menu-btn p-3 relative">
-                    <div className="absolute top-1 right-2 text-2xl text-[#50C878] opacity-40 font-[family-name:var(--font-dotgothic)]">西</div>
-                    <p className="text-[10px] text-[#87CEEB] font-[family-name:var(--font-dotgothic)] mb-1">WEST</p>
+                    <div className="absolute top-1 right-2 text-2xl text-[#DC143C] opacity-40 font-[family-name:var(--font-dotgothic)]">東</div>
+                    <p className="text-[10px] text-[#87CEEB] font-[family-name:var(--font-dotgothic)] mb-1">EAST</p>
                     <select
                         value={p2}
                         onChange={(e) => setP2(e.target.value)}
-                        className="w-full bg-[#2a1f3d] text-white p-2 text-sm font-[family-name:var(--font-dotgothic)] border-2 border-[#3d2d5c] focus:border-[#50C878] outline-none"
+                        className="w-full bg-[#2a1f3d] text-white p-2 text-sm font-[family-name:var(--font-dotgothic)] border-2 border-[#3d2d5c] focus:border-[#FFD700] outline-none"
                     >
                         {wrestlers.map(w => (
                             <option key={w.id} value={w.id}>
@@ -149,14 +164,16 @@ export default function ControllerPage() {
                     </select>
                     {w2 && (
                         <div className="mt-2 flex gap-3 items-center relative">
-                            {/* KIAI OVERLAY */}
+                            {/* KIAI OVERLAY - Shows during fight (NOKOTTA state) */}
                             {buttonText === BUTTON_TEXT.NOKOTTA && (
                                 <button
                                     onClick={() => api.fightAction(w2.id, 'kiai')}
-                                    className="absolute inset-0 z-10 bg-blue-600 active:bg-blue-700 text-white font-[family-name:var(--font-dotgothic)] text-2xl animate-pulse border-4 border-yellow-400 flex flex-col items-center justify-center shadow-lg"
+                                    style={{ backgroundColor: `rgb(${w2.color})` }}
+                                    className="absolute inset-0 z-10 text-white font-[family-name:var(--font-dotgothic)] text-2xl animate-pulse border-4 border-yellow-400 flex flex-col items-center justify-center shadow-lg active:brightness-90 transition-all filter"
                                 >
                                     <span>💥</span>
                                     <span>PUSH!</span>
+                                    {soloMode && <span className="text-[10px] mt-1 opacity-70">EAST</span>}
                                 </button>
                             )}
 

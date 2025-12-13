@@ -1,0 +1,275 @@
+{
+  "timestamp": "2025-12-13T12:56:35.907613",
+  "phase1": {
+    "matches": [
+      {
+        "match_index": 1,
+        "duration_sim": 4.55,
+        "duration_real": 0.0014,
+        "winner": "p1",
+        "winner_name": "Strategic",
+        "p1_persona": "Strategic",
+        "p2_persona": "Newbie",
+        "p1_pushes": 15,
+        "p2_pushes": 2,
+        "skill_events": 0,
+        "collision_frames": 0,
+        "final_state": {
+          "p1_x": 40.91,
+          "p2_x": 17.99,
+          "p1_stamina": 0,
+          "p2_stamina": 100.0
+        }
+      },
+      {
+        "match_index": 2,
+        "duration_sim": 2.82,
+        "duration_real": 0.0005,
+        "winner": "p1",
+        "winner_name": "Button Masher",
+        "p1_persona": "Button Masher",
+        "p2_persona": "Casual Player",
+        "p1_pushes": 19,
+        "p2_pushes": 10,
+        "skill_events": 0,
+        "collision_frames": 0,
+        "final_state": {
+          "p1_x": 43.86,
+          "p2_x": 17.99,
+          "p1_stamina": 0,
+          "p2_stamina": 0
+        }
+      },
+      {
+        "match_index": 3,
+        "duration_sim": 2.33,
+        "duration_real": 0.0008,
+        "winner": "p2",
+        "winner_name": "Button Masher",
+        "p1_persona": "Newbie",
+        "p2_persona": "Button Masher",
+        "p1_pushes": 0,
+        "p2_pushes": 17,
+        "skill_events": 0,
+        "collision_frames": 0,
+        "final_state": {
+          "p1_x": 46.01,
+          "p2_x": 25.82,
+          "p1_stamina": 100.0,
+          "p2_stamina": 0
+        }
+      },
+      {
+        "match_index": 4,
+        "duration_sim": 3.73,
+        "duration_real": 0.0012,
+        "winner": "p2",
+        "winner_name": "Strategic",
+        "p1_persona": "Strategic",
+        "p2_persona": "Strategic",
+        "p1_pushes": 13,
+        "p2_pushes": 12,
+        "skill_events": 0,
+        "collision_frames": 0,
+        "final_state": {
+          "p1_x": 46.03,
+          "p2_x": 18.06,
+          "p1_stamina": 0,
+          "p2_stamina": 0
+        }
+      },
+      {
+        "match_index": 5,
+        "duration_sim": 1.4,
+        "duration_real": 0.0004,
+        "winner": "p1",
+        "winner_name": "Pro Gamer",
+        "p1_persona": "Pro Gamer",
+        "p2_persona": "Newbie",
+        "p1_pushes": 15,
+        "p2_pushes": 0,
+        "skill_events": 0,
+        "collision_frames": 0,
+        "final_state": {
+          "p1_x": 38.18,
+          "p2_x": 17.96,
+          "p1_stamina": 0,
+          "p2_stamina": 100.0
+        }
+      },
+      {
+        "match_index": 6,
+        "duration_sim": 2.12,
+        "duration_real": 0.001,
+        "winner": "p2",
+        "winner_name": "Pro Gamer",
+        "p1_persona": "Strategic",
+        "p2_persona": "Pro Gamer",
+        "p1_pushes": 8,
+        "p2_pushes": 21,
+        "skill_events": 0,
+        "collision_frames": 0,
+        "final_state": {
+          "p1_x": 46.02,
+          "p2_x": 20.39,
+          "p1_stamina": 0,
+          "p2_stamina": 0
+        }
+      },
+      {
+        "match_index": 7,
+        "duration_sim": 1.52,
+        "duration_real": 0.0003,
+        "winner": "p1",
+        "winner_name": "Pro Gamer",
+        "p1_persona": "Pro Gamer",
+        "p2_persona": "Pro Gamer",
+        "p1_pushes": 14,
+        "p2_pushes": 15,
+        "skill_events": 0,
+        "collision_frames": 0,
+        "final_state": {
+          "p1_x": 45.72,
+          "p2_x": 18.0,
+          "p1_stamina": 0,
+          "p2_stamina": 0
+        }
+      },
+      {
+        "match_index": 8,
+        "duration_sim": 3.82,
+        "duration_real": 0.0006,
+        "winner": "p2",
+        "winner_name": "Casual Player",
+        "p1_persona": "Casual Player",
+        "p2_persona": "Casual Player",
+        "p1_pushes": 11,
+        "p2_pushes": 13,
+        "skill_events": 0,
+        "collision_frames": 0,
+        "final_state": {
+          "p1_x": 46.0,
+          "p2_x": 18.56,
+          "p1_stamina": 0,
+          "p2_stamina": 0
+        }
+      },
+      {
+        "match_index": 9,
+        "duration_sim": 1.27,
+        "duration_real": 0.0004,
+        "winner": "p1",
+        "winner_name": "Pro Gamer",
+        "p1_persona": "Pro Gamer",
+        "p2_persona": "Newbie",
+        "p1_pushes": 13,
+        "p2_pushes": 1,
+        "skill_events": 0,
+        "collision_frames": 0,
+        "final_state": {
+          "p1_x": 39.53,
+          "p2_x": 17.98,
+          "p1_stamina": 0,
+          "p2_stamina": 85.3
+        }
+      },
+      {
+        "match_index": 10,
+        "duration_sim": 6.07,
+        "duration_real": 0.0009,
+        "winner": "p1",
+        "winner_name": "Casual Player",
+        "p1_persona": "Casual Player",
+        "p2_persona": "Casual Player",
+        "p1_pushes": 19,
+        "p2_pushes": 16,
+        "skill_events": 0,
+        "collision_frames": 0,
+        "final_state": {
+          "p1_x": 45.37,
+          "p2_x": 17.99,
+          "p1_stamina": 0,
+          "p2_stamina": 0
+        }
+      }
+    ],
+    "stats": {
+      "total_real_time": 0.00794076919555664,
+      "avg_duration": 2.963,
+      "min_duration": 1.27,
+      "max_duration": 6.07,
+      "std_dev": 1.5641117465052028,
+      "in_target_range": false
+    },
+    "passed": false
+  },
+  "phase2": {
+    "tests": [
+      {
+        "test": "Rapid Mashing",
+        "passed": true,
+        "time": 0.21666666666666665
+      },
+      {
+        "test": "Wrong State Inputs",
+        "passed": true
+      },
+      {
+        "test": "Invalid Player IDs",
+        "passed": true
+      },
+      {
+        "test": "Edge Case Delta",
+        "passed": true
+      },
+      {
+        "test": "Bot Mode",
+        "passed": true,
+        "iterations": 638
+      }
+    ],
+    "passed": true
+  },
+  "phase3": {
+    "feedback": [
+      {
+        "user": "CasualGamer42",
+        "user_type": "casual",
+        "rating": 5,
+        "sentiment": "positive",
+        "feedback": "Matches feel like real sumo - the back and forth is amazing!"
+      },
+      {
+        "user": "ProSumoFan",
+        "user_type": "enthusiast",
+        "rating": 4,
+        "sentiment": "positive",
+        "feedback": "Perfect match length - not too short, not dragging on."
+      },
+      {
+        "user": "GameReview_Bot",
+        "user_type": "critic",
+        "rating": 3,
+        "sentiment": "neutral",
+        "feedback": "Stamina management is interesting."
+      },
+      {
+        "user": "FirstTimePlayer",
+        "user_type": "newbie",
+        "rating": 2,
+        "sentiment": "negative",
+        "feedback": "Wish there was more variety in the moves."
+      },
+      {
+        "user": "StreamerSteve",
+        "user_type": "content_creator",
+        "rating": 1,
+        "sentiment": "negative",
+        "feedback": "Hard to tell when I'm winning."
+      }
+    ],
+    "avg_rating": 3.0,
+    "passed": false
+  },
+  "overall_status": "NEEDS ATTENTION"
+}

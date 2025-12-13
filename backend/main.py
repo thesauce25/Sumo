@@ -4,6 +4,7 @@ from typing import Dict, List
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from google.cloud import firestore as firestore_module
 
 # Import our new Engine and Services
 from app.core.engine import SumoEngine
@@ -63,30 +64,51 @@ class MatchManager:
                 del self.match_timestamps[match_id]
         print(f"[MatchManager] Cleared all matches. Starting fresh.")
 
-    async def create_match(self, match_id: str, p1_id: str, p2_id: str):
+    async def create_match(self, match_id: str, p1_id: str, p2_id: str, simulation_mode: bool = False):
         # MVP: Clear any existing matches before starting new one
         self.clear_all_matches()
         
-        # 1. Fetch REAL Data from Firestore
-        db = get_db()
-        p1_ref = db.collection('wrestlers').document(p1_id).get()
-        p2_ref = db.collection('wrestlers').document(p2_id).get()
+        try:
+            # 1. Fetch REAL Data from Firestore
+            db = get_db()
+            p1_ref = db.collection('wrestlers').document(p1_id).get()
+            p2_ref = db.collection('wrestlers').document(p2_id).get()
+    
+            if not p1_ref.exists or not p2_ref.exists:
+                if simulation_mode:
+                     raise Exception("Wrestlers not found, falling back to mock")
+                else:
+                    raise HTTPException(status_code=404, detail="One or more wrestlers not found in DB")
+    
+            p1_data = p1_ref.to_dict()
+            p2_data = p2_ref.to_dict()
+            
+        except Exception as e:
+            if simulation_mode:
+                print(f"[MatchManager] DB Error in Sim Mode, using MOCK data: {e}")
+                p1_data = {"id": p1_id, "name": "SimBot 1", "strength": 1.2, "technique": 0.8, "speed": 1.0, "weight": 160, "color": "255,0,0"}
+                p2_data = {"id": p2_id, "name": "SimBot 2", "strength": 0.9, "technique": 1.1, "speed": 1.1, "weight": 140, "color": "0,0,255"}
+            else:
+                raise e
 
-        if not p1_ref.exists or not p2_ref.exists:
-            raise HTTPException(status_code=404, detail="One or more wrestlers not found in DB")
-
-        p1_data = p1_ref.to_dict()
-        p2_data = p2_ref.to_dict()
-        
         # Inject ID for engine reference
         p1_data['id'] = p1_id
         p2_data['id'] = p2_id
 
-        engine = SumoEngine()
+        engine = SumoEngine(simulation_mode=simulation_mode)
         engine.set_wrestlers(p1_data, p2_data)
+        
+        # PROTOTYPE MODE: Auto-start the fight immediately only if NOT sim mode (sim handles its own tachiai)
+        # But actually, sim handles inputs, so force_start is still okay if we want to skip tachiai entirely.
+        # However, plan said "Bots auto-resolve Tachiai". Let's let them doing it organically via input injection.
+        if not simulation_mode:
+            engine.force_start()
+        
         self.matches[match_id] = engine
         self.connections[match_id] = []
         self.match_timestamps[match_id] = time.time()  # Track creation time
+        
+        print(f"[MatchManager] Match {match_id} CREATED. P1={p1_id}, P2={p2_id}, Sim={simulation_mode}")
         
         # Start the Game Loop for this match
         asyncio.create_task(self.game_loop(match_id))
@@ -145,19 +167,30 @@ class MatchManager:
         final_state = engine.get_state()
         await self.broadcast(match_id, final_state)
         
-        # OPTIONAL: Save Match Result to Firestore
-        db = get_db()
-        db.collection('matches').document(match_id).set({
-            "winner_id": final_state['winner'],
-            "timestamp": firestore.SERVER_TIMESTAMP,
-            "log": "Game completed successfully"
-        })
+        # Save Match Result to Firestore (wrapped in try/except for robustness)
+        try:
+            db = get_db()
+            db.collection('matches').document(match_id).set({
+                "winner_id": final_state['winner'],
+                "timestamp": firestore_module.SERVER_TIMESTAMP,
+                "log": "Game completed successfully"
+            })
+        except Exception as e:
+            # In simulation mode without creds, this is expected. Don't spam trace.
+            if "DefaultCredentialsError" in str(e):
+                 print(f"[MatchManager] Skipping Firestore save (No Creds)")
+            else:
+                 import traceback
+                 traceback.print_exc()
+                 print(f"[MatchManager] Failed to save match result: {e}")
         
-        # Cleanup
+        # Cleanup - always runs even if Firestore save fails
         if match_id in self.matches:
+            print(f"[MatchManager] cleanup: Removing match {match_id} from memory")
             del self.matches[match_id]
         if match_id in self.match_timestamps:
             del self.match_timestamps[match_id]
+        print(f"[MatchManager] Match {match_id} cleaned up successfully")
 
 manager = MatchManager()
 
@@ -382,12 +415,22 @@ async def fight_action(req: dict):
     wrestler_id = req.get("wrestler_id")
     action = req.get("action")
     
+    # Debug: Log incoming action request
+    print(f"[FightAction] Received: wrestler_id='{wrestler_id}', action='{action}'")
+    
     # Find the active match with this wrestler
     for match_id, engine in manager.matches.items():
-        if str(engine.p1.get('id')) == str(wrestler_id) or str(engine.p2.get('id')) == str(wrestler_id):
+        p1_id = str(engine.p1.get('id'))
+        p2_id = str(engine.p2.get('id'))
+        
+        # Debug: Log ID comparison
+        print(f"[FightAction] Match {match_id}: p1_id='{p1_id}', p2_id='{p2_id}', checking '{wrestler_id}'")
+        
+        if p1_id == str(wrestler_id) or p2_id == str(wrestler_id):
             engine.handle_input(str(wrestler_id), action.upper() if action else "PUSH")
             return {"success": True, "match_id": match_id, "action": action}
     
+    print(f"[FightAction] WARN: No match found for wrestler_id='{wrestler_id}'")
     return {"success": False, "error": "No active match for this wrestler"}
 
 @app.post("/api/match")
@@ -410,6 +453,83 @@ async def start_match(req: CreateMatchRequest):
         "ws_url": f"/ws/{match_id}", # Client app prepends domain
         "watch_url": f"https://your-app-domain.com/watch/{match_id}"
     }
+
+@app.post("/api/match/simulate")
+async def start_simulation():
+    """
+    Starts an automated match between two random wrestlers (or mocked ones).
+    Useful for testing physics without manual input.
+    """
+    # Auto-select two arbitrary IDs for now, or fetch from DB
+    p1_id = "test_bot_1"
+    p2_id = "test_bot_2"
+    
+    # In simulation mode, we don't strictly need real DB wrestlers if we have the fallback.
+    # So let's skip the DB query here to avoid the Auth error before even calling create_match.
+    
+    match_id = f"sim-{int(time.time())}"
+    
+    try:
+        await manager.create_match(match_id, p1_id, p2_id, simulation_mode=True)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+        
+    return {
+        "status": "simulation_started",
+        "match_id": match_id,
+        "mode": "auto_bot_battle",
+        "watch_url": f"/watch"
+    }
+
+# --- Demo Simulation for Watch Page ---
+# Persistent demo engine for background simulation on watch page
+_demo_engine = None
+_demo_last_tick = 0.0
+
+def _get_demo_engine():
+    """Get or create the demo simulation engine."""
+    global _demo_engine, _demo_last_tick
+    
+    # Create new engine if none exists or game is over
+    if _demo_engine is None or _demo_engine.game_over:
+        _demo_engine = SumoEngine(simulation_mode=True)
+        # Set up demo wrestlers with fun names
+        _demo_engine.set_wrestlers(
+            {"id": "demo_p1", "name": "DEMO EAST", "custom_name": "Demo Bot", "strength": 1.1, "technique": 0.9, "speed": 1.0, "weight": 160, "color": "120,180,255", "avatar_seed": 12345},
+            {"id": "demo_p2", "name": "DEMO WEST", "custom_name": "Bot Demo", "strength": 0.9, "technique": 1.1, "speed": 1.0, "weight": 150, "color": "255,150,100", "avatar_seed": 54321}
+        )
+        _demo_engine.force_start()
+        _demo_last_tick = time.time()
+    
+    return _demo_engine
+
+@app.get("/api/demo/state")
+async def get_demo_state():
+    """
+    Returns simulated match state for the watch page demo mode.
+    The watch page can poll this to show a background demo fight while waiting for a real match.
+    """
+    global _demo_last_tick
+    
+    engine = _get_demo_engine()
+    
+    # Calculate delta time since last tick
+    now = time.time()
+    dt = min(now - _demo_last_tick, 0.1)  # Cap at 100ms to avoid huge jumps
+    _demo_last_tick = now
+    
+    # Tick the simulation
+    if not engine.game_over:
+        engine.tick(dt)
+    
+    # Get state and add demo flag
+    state = engine.get_state()
+    state['is_demo'] = True
+    state['demo_label'] = 'DEMO MATCH'
+    
+    return state
 
 @app.post("/api/match/{match_id}/action")
 async def send_action(match_id: str, req: ActionRequest):
