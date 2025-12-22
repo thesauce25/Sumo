@@ -131,7 +131,7 @@ export function SkillTree({ wrestlerId, wrestlerName, onClose }: SkillTreeProps)
         return wrestlerSkills?.unlocked_skills.some(s => s.id === skillId) ?? false;
     };
 
-    const getLockReason = (skill: Skill, branchKey: string): string | null => {
+    const getLockReason = (skill: Skill, branchKey: string | null): string | null => {
         if (isSkillUnlocked(skill.id)) return null;
 
         // 1. Check SP
@@ -140,6 +140,7 @@ export function SkillTree({ wrestlerId, wrestlerName, onClose }: SkillTreeProps)
 
         // 2. Check Prerequisite
         if (skill.tier > 1) {
+            if (!branchKey || !skillTree[branchKey]) return null; // Safety check
             const prevTierSkill = skillTree[branchKey]?.skills.find(s => s.tier === skill.tier - 1);
             if (prevTierSkill && !isSkillUnlocked(prevTierSkill.id)) {
                 return `REQUIRES ${prevTierSkill.name.toUpperCase()} (TIER ${prevTierSkill.tier})`;
@@ -385,7 +386,8 @@ export function SkillTree({ wrestlerId, wrestlerName, onClose }: SkillTreeProps)
                             ) : (
                                 <div className="space-y-3">
                                     {(() => {
-                                        const lockReason = getLockReason(selectedSkill, selectedBranch!);
+                                        // Safe access with null check
+                                        const lockReason = getLockReason(selectedSkill, selectedBranch);
                                         const canAfford = wrestlerSkills && wrestlerSkills.skill_points >= selectedSkill.cost;
 
                                         if (lockReason && lockReason.includes("REQUIRES")) {

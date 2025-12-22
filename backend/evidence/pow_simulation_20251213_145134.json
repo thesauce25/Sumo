@@ -1,0 +1,255 @@
+{
+  "timestamp": "2025-12-13T14:51:34.398120",
+  "phase1": {
+    "matches": [
+      {
+        "match_index": 1,
+        "duration_sim": 120.0,
+        "duration_real": 0.019826889038085938,
+        "winner": "DRAW",
+        "winner_name": "DRAW (Timeout)",
+        "timeout": true,
+        "p1_persona": "Casual Player",
+        "p2_persona": "Strategic",
+        "p1_pushes": 373,
+        "p2_pushes": 412,
+        "skill_events": 35,
+        "collision_frames": 496,
+        "final_state": {}
+      },
+      {
+        "match_index": 2,
+        "duration_sim": 1.48,
+        "duration_real": 0.0003,
+        "winner": "p2",
+        "winner_name": "Pro Gamer",
+        "p1_persona": "Strategic",
+        "p2_persona": "Pro Gamer",
+        "p1_pushes": 3,
+        "p2_pushes": 15,
+        "skill_events": 1,
+        "collision_frames": 33,
+        "final_state": {
+          "p1_x": 17.95,
+          "p2_x": 24.38,
+          "p1_stamina": 57.5,
+          "p2_stamina": 0
+        }
+      },
+      {
+        "match_index": 3,
+        "duration_sim": 35.57,
+        "duration_real": 0.0061,
+        "winner": "p1",
+        "winner_name": "Newbie",
+        "p1_persona": "Newbie",
+        "p2_persona": "Newbie",
+        "p1_pushes": 34,
+        "p2_pushes": 30,
+        "skill_events": 20,
+        "collision_frames": 595,
+        "final_state": {
+          "p1_x": 39.97,
+          "p2_x": 45.99,
+          "p1_stamina": 40.0,
+          "p2_stamina": 100.0
+        }
+      },
+      {
+        "match_index": 4,
+        "duration_sim": 120.0,
+        "duration_real": 0.023029088973999023,
+        "winner": "DRAW",
+        "winner_name": "DRAW (Timeout)",
+        "timeout": true,
+        "p1_persona": "Pro Gamer",
+        "p2_persona": "Pro Gamer",
+        "p1_pushes": 1172,
+        "p2_pushes": 1166,
+        "skill_events": 58,
+        "collision_frames": 749,
+        "final_state": {}
+      },
+      {
+        "match_index": 5,
+        "duration_sim": 120.0,
+        "duration_real": 0.02023005485534668,
+        "winner": "DRAW",
+        "winner_name": "DRAW (Timeout)",
+        "timeout": true,
+        "p1_persona": "Strategic",
+        "p2_persona": "Strategic",
+        "p1_pushes": 401,
+        "p2_pushes": 407,
+        "skill_events": 55,
+        "collision_frames": 779,
+        "final_state": {}
+      },
+      {
+        "match_index": 6,
+        "duration_sim": 120.0,
+        "duration_real": 0.023462772369384766,
+        "winner": "DRAW",
+        "winner_name": "DRAW (Timeout)",
+        "timeout": true,
+        "p1_persona": "Pro Gamer",
+        "p2_persona": "Pro Gamer",
+        "p1_pushes": 1155,
+        "p2_pushes": 1154,
+        "skill_events": 51,
+        "collision_frames": 555,
+        "final_state": {}
+      },
+      {
+        "match_index": 7,
+        "duration_sim": 1.6,
+        "duration_real": 0.0003,
+        "winner": "p2",
+        "winner_name": "Pro Gamer",
+        "p1_persona": "Newbie",
+        "p2_persona": "Pro Gamer",
+        "p1_pushes": 3,
+        "p2_pushes": 17,
+        "skill_events": 1,
+        "collision_frames": 35,
+        "final_state": {
+          "p1_x": 17.98,
+          "p2_x": 22.68,
+          "p1_stamina": 56.7,
+          "p2_stamina": 0
+        }
+      },
+      {
+        "match_index": 8,
+        "duration_sim": 120.0,
+        "duration_real": 0.021981000900268555,
+        "winner": "DRAW",
+        "winner_name": "DRAW (Timeout)",
+        "timeout": true,
+        "p1_persona": "Strategic",
+        "p2_persona": "Strategic",
+        "p1_pushes": 396,
+        "p2_pushes": 409,
+        "skill_events": 53,
+        "collision_frames": 878,
+        "final_state": {}
+      },
+      {
+        "match_index": 9,
+        "duration_sim": 3.2,
+        "duration_real": 0.001,
+        "winner": "p2",
+        "winner_name": "Pro Gamer",
+        "p1_persona": "Strategic",
+        "p2_persona": "Pro Gamer",
+        "p1_pushes": 10,
+        "p2_pushes": 32,
+        "skill_events": 1,
+        "collision_frames": 30,
+        "final_state": {
+          "p1_x": 17.86,
+          "p2_x": 23.36,
+          "p1_stamina": 0,
+          "p2_stamina": 0
+        }
+      },
+      {
+        "match_index": 10,
+        "duration_sim": 1.25,
+        "duration_real": 0.0004,
+        "winner": "p1",
+        "winner_name": "Pro Gamer",
+        "p1_persona": "Pro Gamer",
+        "p2_persona": "Strategic",
+        "p1_pushes": 13,
+        "p2_pushes": 4,
+        "skill_events": 1,
+        "collision_frames": 24,
+        "final_state": {
+          "p1_x": 41.12,
+          "p2_x": 46.03,
+          "p1_stamina": 0,
+          "p2_stamina": 40.0
+        }
+      }
+    ],
+    "stats": {
+      "total_real_time": 0.11697196960449219,
+      "avg_duration": 64.31,
+      "min_duration": 1.25,
+      "max_duration": 120.0,
+      "std_dev": 59.557644159064736,
+      "in_target_range": false
+    },
+    "passed": false
+  },
+  "phase2": {
+    "tests": [
+      {
+        "test": "Rapid Mashing",
+        "passed": true,
+        "time": 8.333333333333327
+      },
+      {
+        "test": "Wrong State Inputs",
+        "passed": true
+      },
+      {
+        "test": "Invalid Player IDs",
+        "passed": true
+      },
+      {
+        "test": "Edge Case Delta",
+        "passed": true
+      },
+      {
+        "test": "Bot Mode",
+        "passed": true,
+        "iterations": 186
+      }
+    ],
+    "passed": true
+  },
+  "phase3": {
+    "feedback": [
+      {
+        "user": "CasualGamer42",
+        "user_type": "casual",
+        "rating": 4,
+        "sentiment": "positive",
+        "feedback": "The skill moves that pop up are so satisfying."
+      },
+      {
+        "user": "ProSumoFan",
+        "user_type": "enthusiast",
+        "rating": 5,
+        "sentiment": "positive",
+        "feedback": "The stamina system adds great tension! I love how I can't just spam buttons."
+      },
+      {
+        "user": "GameReview_Bot",
+        "user_type": "critic",
+        "rating": 4,
+        "sentiment": "neutral",
+        "feedback": "Stamina management is interesting."
+      },
+      {
+        "user": "FirstTimePlayer",
+        "user_type": "newbie",
+        "rating": 4,
+        "sentiment": "neutral",
+        "feedback": "Match times feel about right."
+      },
+      {
+        "user": "StreamerSteve",
+        "user_type": "content_creator",
+        "rating": 5,
+        "sentiment": "positive",
+        "feedback": "Edge resistance makes comebacks possible - thrilling!"
+      }
+    ],
+    "avg_rating": 4.4,
+    "passed": true
+  },
+  "overall_status": "NEEDS ATTENTION"
+}

@@ -6,7 +6,7 @@ import { WRESTLER_POLL_INTERVAL_MS, STATUS_POLL_INTERVAL_MS, AVATAR_SIZE_CONTROL
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { PixelSumo } from "@/components/PixelSumo";
-import { ArrowLeft, Gamepad2 } from "lucide-react";
+import { ArrowLeft, Gamepad2, RotateCcw } from "lucide-react";
 
 export default function ControllerPage() {
     const [wrestlers, setWrestlers] = useState<Wrestler[]>([]);
@@ -37,22 +37,33 @@ export default function ControllerPage() {
             fetch(`${getApiUrl()}/status`)
                 .then(res => res.json())
                 .then(data => {
-                    if (data.status === "FIGHTING") {
+                    if (data.status === "FIGHTING" || data.status === "COUNTDOWN") {
                         setLoading(true);
-                        setButtonText(BUTTON_TEXT.NOKOTTA);
-                    } else if (buttonText === BUTTON_TEXT.NOKOTTA) {
-                        setLoading(false);
-                        setButtonText(BUTTON_TEXT.TACHIAI);
-                        fetchWrestlers();
+                        setButtonText(data.status === "COUNTDOWN" ? BUTTON_TEXT.HAKKEYOI : BUTTON_TEXT.NOKOTTA);
+                    } else if (data.status === "GAME_OVER") {
+                        // Match just ended - keep showing buttons but prepare for reset
+                        // Will reset when status returns to IDLE/WAITING
+                    } else if (data.status === "IDLE" || data.status === "WAITING") {
+                        // Server is idle - reset to wrestler selection if we were in a match
+                        if (buttonText === BUTTON_TEXT.NOKOTTA || buttonText === BUTTON_TEXT.HAKKEYOI || loading) {
+                            setLoading(false);
+                            setButtonText(BUTTON_TEXT.TACHIAI);
+                            fetchWrestlers(); // Refresh to get updated win/loss records
+                        }
                     }
                 })
                 .catch(err => console.error(err));
         }, STATUS_POLL_INTERVAL_MS);
         return () => clearInterval(interval);
-    }, [buttonText, fetchWrestlers]);
+    }, [buttonText, fetchWrestlers, loading]);
 
     const handleFight = async () => {
         if (!p1 || !p2) return;
+        // Validate: can't fight yourself
+        if (p1 === p2) {
+            alert("Cannot select the same wrestler for both sides!");
+            return;
+        }
         setLoading(true);
         setButtonText(BUTTON_TEXT.HAKKEYOI);
         await api.startFight(p1, p2);
@@ -80,12 +91,33 @@ export default function ControllerPage() {
                 <button
                     onClick={() => setSoloMode(!soloMode)}
                     className={`flex items-center gap-1.5 px-2 py-1 rounded border-2 text-[10px] font-[family-name:var(--font-dotgothic)] transition-all ${soloMode
-                        ? 'bg-[#FFD700] text-black border-[#FFF8DC]'
+                        ? 'bg-[#50C878] text-white border-[#90EE90] shadow-[0_0_10px_rgba(80,200,120,0.5)]'
                         : 'bg-[#2a1f3d] text-gray-400 border-[#3d2d5c] hover:border-[#FFD700]'
                         }`}
                 >
                     <Gamepad2 className="h-3 w-3" />
-                    <span>SOLO</span>
+                    <span>{soloMode ? "SOLO ACTIVE" : "SOLO OFF"}</span>
+                </button>
+
+                {/* Reset Match Button */}
+                <button
+                    onClick={async () => {
+                        if (window.confirm('Reset current match? This will clear any stuck state.')) {
+                            try {
+                                await api.resetMatch();
+                                setLoading(false);
+                                setButtonText(BUTTON_TEXT.TACHIAI);
+                                fetchWrestlers();
+                            } catch (err) {
+                                console.error('Reset failed:', err);
+                                alert('Failed to reset match');
+                            }
+                        }
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 rounded border-2 text-[10px] font-[family-name:var(--font-dotgothic)] bg-[#2a1f3d] text-gray-400 border-[#3d2d5c] hover:border-red-400 hover:text-red-400 transition-all"
+                    title="Reset stuck match"
+                >
+                    <RotateCcw className="h-3 w-3" />
                 </button>
             </header>
 
@@ -108,17 +140,29 @@ export default function ControllerPage() {
                     </select>
                     {w1 && (
                         <div className="mt-2 flex gap-3 items-center relative">
-                            {/* KIAI OVERLAY - Shows during fight (NOKOTTA state) */}
+                            {/* DIRECTIONAL CONTROLS - Shows during fight (NOKOTTA state) */}
                             {buttonText === BUTTON_TEXT.NOKOTTA && (
-                                <button
-                                    onClick={() => api.fightAction(w1.id, 'kiai')}
-                                    style={{ backgroundColor: `rgb(${w1.color})` }}
-                                    className="absolute inset-0 z-10 text-white font-[family-name:var(--font-dotgothic)] text-2xl animate-pulse border-4 border-yellow-400 flex flex-col items-center justify-center shadow-lg active:brightness-90 transition-all filter"
-                                >
-                                    <span>💥</span>
-                                    <span>PUSH!</span>
-                                    {soloMode && <span className="text-[10px] mt-1 opacity-70">WEST</span>}
-                                </button>
+                                <div className="absolute inset-0 z-10 flex gap-2 p-1">
+                                    {/* LEFT PUSH BUTTON */}
+                                    <button
+                                        onClick={() => api.fightAction(w1.id, 'push_left')}
+                                        style={{ backgroundColor: `rgb(${w1.color})` }}
+                                        className="flex-1 text-white font-[family-name:var(--font-dotgothic)] text-xl border-4 border-l-yellow-300 border-t-yellow-300 border-r-yellow-600 border-b-yellow-600 flex flex-col items-center justify-center shadow-lg active:brightness-75 active:scale-95 transition-all"
+                                    >
+                                        <span className="text-2xl">◄</span>
+                                        <span className="text-[10px]">LEFT</span>
+                                    </button>
+                                    {/* RIGHT PUSH BUTTON */}
+                                    <button
+                                        onClick={() => api.fightAction(w1.id, 'push_right')}
+                                        style={{ backgroundColor: `rgb(${w1.color})` }}
+                                        className="flex-1 text-white font-[family-name:var(--font-dotgothic)] text-xl border-4 border-l-yellow-300 border-t-yellow-300 border-r-yellow-600 border-b-yellow-600 flex flex-col items-center justify-center shadow-lg active:brightness-75 active:scale-95 transition-all"
+                                    >
+                                        <span className="text-2xl">►</span>
+                                        <span className="text-[10px]">RIGHT</span>
+                                    </button>
+                                    {soloMode && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 text-[8px] text-white/70 font-[family-name:var(--font-dotgothic)]">WEST</span>}
+                                </div>
                             )}
 
                             <div className="bg-[#1a1428] p-1.5 border-2 border-[#3d2d5c]">
@@ -164,17 +208,29 @@ export default function ControllerPage() {
                     </select>
                     {w2 && (
                         <div className="mt-2 flex gap-3 items-center relative">
-                            {/* KIAI OVERLAY - Shows during fight (NOKOTTA state) */}
+                            {/* DIRECTIONAL CONTROLS - Shows during fight (NOKOTTA state) */}
                             {buttonText === BUTTON_TEXT.NOKOTTA && (
-                                <button
-                                    onClick={() => api.fightAction(w2.id, 'kiai')}
-                                    style={{ backgroundColor: `rgb(${w2.color})` }}
-                                    className="absolute inset-0 z-10 text-white font-[family-name:var(--font-dotgothic)] text-2xl animate-pulse border-4 border-yellow-400 flex flex-col items-center justify-center shadow-lg active:brightness-90 transition-all filter"
-                                >
-                                    <span>💥</span>
-                                    <span>PUSH!</span>
-                                    {soloMode && <span className="text-[10px] mt-1 opacity-70">EAST</span>}
-                                </button>
+                                <div className="absolute inset-0 z-10 flex gap-2 p-1">
+                                    {/* LEFT PUSH BUTTON */}
+                                    <button
+                                        onClick={() => api.fightAction(w2.id, 'push_left')}
+                                        style={{ backgroundColor: `rgb(${w2.color})` }}
+                                        className="flex-1 text-white font-[family-name:var(--font-dotgothic)] text-xl border-4 border-l-yellow-300 border-t-yellow-300 border-r-yellow-600 border-b-yellow-600 flex flex-col items-center justify-center shadow-lg active:brightness-75 active:scale-95 transition-all"
+                                    >
+                                        <span className="text-2xl">◄</span>
+                                        <span className="text-[10px]">LEFT</span>
+                                    </button>
+                                    {/* RIGHT PUSH BUTTON */}
+                                    <button
+                                        onClick={() => api.fightAction(w2.id, 'push_right')}
+                                        style={{ backgroundColor: `rgb(${w2.color})` }}
+                                        className="flex-1 text-white font-[family-name:var(--font-dotgothic)] text-xl border-4 border-l-yellow-300 border-t-yellow-300 border-r-yellow-600 border-b-yellow-600 flex flex-col items-center justify-center shadow-lg active:brightness-75 active:scale-95 transition-all"
+                                    >
+                                        <span className="text-2xl">►</span>
+                                        <span className="text-[10px]">RIGHT</span>
+                                    </button>
+                                    {soloMode && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 text-[8px] text-white/70 font-[family-name:var(--font-dotgothic)]">EAST</span>}
+                                </div>
                             )}
 
                             <div className="bg-[#1a1428] p-1.5 border-2 border-[#3d2d5c]">

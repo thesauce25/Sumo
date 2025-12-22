@@ -12,8 +12,7 @@ from app.core.engine import SumoEngine, STATE_FIGHTING
 def test_p1_push_moves_p2_right():
     """
     When P1 (left side) pushes, P2 (right side) should move further right (positive X).
-    P1 starts at x=22, P2 starts at x=42.
-    After P1 pushes, P2's x should increase.
+    Wrestlers must be within HIT_RANGE (6.0) for push to affect opponent.
     """
     engine = SumoEngine()
     
@@ -25,14 +24,18 @@ def test_p1_push_moves_p2_right():
     # Force into fighting state
     engine.state = STATE_FIGHTING
     
+    # Move wrestlers close enough (within HIT_RANGE of 6.0)
+    engine.p1['x'] = 30.0
+    engine.p2['x'] = 34.0  # 4 pixels apart (< 6.0 HIT_RANGE)
+    
     # Record initial positions
     p2_initial_x = engine.p2['x']
     p1_initial_x = engine.p1['x']
     
     print(f"Initial: P1 x={p1_initial_x:.2f}, P2 x={p2_initial_x:.2f}")
     
-    # P1 pushes
-    engine.handle_input("wrestler_A", "PUSH")
+    # P1 pushes using directional action
+    engine.handle_input("wrestler_A", "PUSH_RIGHT")
     
     # Allow physics to apply (tick advances velocity into position)
     engine.tick(1/60.0)
@@ -53,8 +56,7 @@ def test_p1_push_moves_p2_right():
 def test_p2_push_moves_p1_left():
     """
     When P2 (right side) pushes, P1 (left side) should move further left (negative X).
-    P1 starts at x=22, P2 starts at x=42.
-    After P2 pushes, P1's x should decrease.
+    Wrestlers must be within HIT_RANGE (6.0) for push to affect opponent.
     """
     engine = SumoEngine()
     
@@ -66,14 +68,18 @@ def test_p2_push_moves_p1_left():
     # Force into fighting state
     engine.state = STATE_FIGHTING
     
+    # Move wrestlers close enough (within HIT_RANGE of 6.0)
+    engine.p1['x'] = 30.0
+    engine.p2['x'] = 34.0  # 4 pixels apart (< 6.0 HIT_RANGE)
+    
     # Record initial positions
     p1_initial_x = engine.p1['x']
     p2_initial_x = engine.p2['x']
     
     print(f"Initial: P1 x={p1_initial_x:.2f}, P2 x={p2_initial_x:.2f}")
     
-    # P2 pushes
-    engine.handle_input("wrestler_B", "PUSH")
+    # P2 pushes using directional action
+    engine.handle_input("wrestler_B", "PUSH_LEFT")
     
     # Allow physics to apply
     engine.tick(1/60.0)
@@ -103,10 +109,14 @@ def test_id_normalization():
     engine.set_wrestlers(p1_data, p2_data)
     engine.state = STATE_FIGHTING
     
+    # Move wrestlers close enough (within HIT_RANGE of 6.0)
+    engine.p1['x'] = 30.0
+    engine.p2['x'] = 34.0
+    
     p2_initial_x = engine.p2['x']
     
     # Send ID as integer - should still work due to normalization
-    engine.handle_input(123, "PUSH")  # int instead of str
+    engine.handle_input(123, "PUSH_RIGHT")  # int instead of str
     engine.tick(1/60.0)
     
     assert engine.p2['x'] > p2_initial_x, \

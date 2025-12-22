@@ -1,5 +1,6 @@
 import asyncio
 import time
+import random
 from typing import Dict, List
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,6 +12,25 @@ from app.core.engine import SumoEngine
 from app.services.firebase import get_db
 
 app = FastAPI(title="Sumo Serverless API")
+
+# --- Progression Constants ---
+XP_BASE_WIN = 50
+XP_BASE_LOSS = 10
+SP_WIN = 2
+SP_LOSS = 1
+
+WRESTLER_RANKS = [
+    {"name": "Jonokuchi", "jp": "序ノ口", "xp_required": 0},
+    {"name": "Jonidan", "jp": "序二段", "xp_required": 200},
+    {"name": "Sandanme", "jp": "三段目", "xp_required": 600},
+    {"name": "Makushita", "jp": "幕下", "xp_required": 1200},
+    {"name": "Juryo", "jp": "十両", "xp_required": 2000},
+    {"name": "Maegashira", "jp": "前頭", "xp_required": 3000},
+    {"name": "Komusubi", "jp": "小結", "xp_required": 4500},
+    {"name": "Sekiwake", "jp": "関脇", "xp_required": 6500},
+    {"name": "Ozeki", "jp": "大関", "xp_required": 9000},
+    {"name": "Yokozuna", "jp": "横綱", "xp_required": 12000},
+]
 
 # CORS - Allow All for Development (Restrict in Prod)
 app.add_middleware(
@@ -170,11 +190,25 @@ class MatchManager:
         # Save Match Result to Firestore (wrapped in try/except for robustness)
         try:
             db = get_db()
+            
+            # Get actual wrestler IDs
+            p1_id = str(engine.p1.get('id'))
+            p2_id = str(engine.p2.get('id'))
+            winner_id = final_state.get('winner')
+            loser_id = p2_id if winner_id == p1_id else p1_id
+            
+            # Update wrestler stats (wins/losses/XP/SP)
+            await update_wrestler_stats(winner_id, loser_id)
+            
             db.collection('matches').document(match_id).set({
-                "winner_id": final_state['winner'],
+                **engine.get_match_summary(),  # Full event log
+                "winner_id": winner_id,
+                "loser_id": loser_id,
+                "p1_id": p1_id,
+                "p2_id": p2_id,
                 "timestamp": firestore_module.SERVER_TIMESTAMP,
-                "log": "Game completed successfully"
             })
+            print(f"[MatchManager] Match {match_id} saved with {len(engine.match_log)} events. Winner: {winner_id}")
         except Exception as e:
             # In simulation mode without creds, this is expected. Don't spam trace.
             if "DefaultCredentialsError" in str(e):
@@ -193,6 +227,77 @@ class MatchManager:
         print(f"[MatchManager] Match {match_id} cleaned up successfully")
 
 manager = MatchManager()
+
+
+# --- Wrestler Stats Update Function ---
+async def update_wrestler_stats(winner_id: str, loser_id: str):
+    """Update wrestler records after a match ends."""
+    try:
+        db = get_db()
+        
+        # Update winner
+        winner_ref = db.collection('wrestlers').document(winner_id)
+        winner_doc = winner_ref.get()
+        if winner_doc.exists:
+            w_data = winner_doc.to_dict()
+            new_wins = w_data.get("wins", 0) + 1
+            new_xp = w_data.get("xp", 0) + XP_BASE_WIN
+            new_sp = w_data.get("skill_points", 0) + SP_WIN
+            new_streak = w_data.get("win_streak", 0) + 1
+            new_matches = w_data.get("matches", 0) + 1
+            
+            # Calculate new rank
+            new_rank_index = 0
+            for i, rank in enumerate(WRESTLER_RANKS):
+                if new_xp >= rank["xp_required"]:
+                    new_rank_index = i
+            
+            winner_ref.update({
+                "wins": new_wins,
+                "matches": new_matches,
+                "xp": new_xp,
+                "skill_points": new_sp,
+                "win_streak": new_streak,
+                "rank_index": new_rank_index,
+                "rank_name": WRESTLER_RANKS[new_rank_index]["name"],
+                "rank_jp": WRESTLER_RANKS[new_rank_index]["jp"]
+            })
+            print(f"[Stats] Winner {winner_id}: +{XP_BASE_WIN}XP, +{SP_WIN}SP, Streak:{new_streak}, Rank:{WRESTLER_RANKS[new_rank_index]['name']}")
+        
+        # Update loser
+        loser_ref = db.collection('wrestlers').document(loser_id)
+        loser_doc = loser_ref.get()
+        if loser_doc.exists:
+            l_data = loser_doc.to_dict()
+            new_losses = l_data.get("losses", 0) + 1
+            new_xp = l_data.get("xp", 0) + XP_BASE_LOSS
+            new_sp = l_data.get("skill_points", 0) + SP_LOSS
+            new_matches = l_data.get("matches", 0) + 1
+            
+            # Calculate new rank  
+            new_rank_index = 0
+            for i, rank in enumerate(WRESTLER_RANKS):
+                if new_xp >= rank["xp_required"]:
+                    new_rank_index = i
+            
+            loser_ref.update({
+                "losses": new_losses,
+                "matches": new_matches,
+                "xp": new_xp,
+                "skill_points": new_sp,
+                "win_streak": 0,  # Reset streak on loss
+                "rank_index": new_rank_index,
+                "rank_name": WRESTLER_RANKS[new_rank_index]["name"],
+                "rank_jp": WRESTLER_RANKS[new_rank_index]["jp"]
+            })
+            print(f"[Stats] Loser {loser_id}: +{XP_BASE_LOSS}XP, +{SP_LOSS}SP")
+            
+    except Exception as e:
+        print(f"[Stats] Error updating wrestler stats: {e}")
+        # Don't fail the match if stats update fails
+        import traceback
+        traceback.print_exc()
+
 
 # --- API Models ---
 class CreateMatchRequest(BaseModel):
@@ -285,26 +390,46 @@ async def create_wrestler(w: dict):
             return {"id": doc_ref.id, **w_copy}
         
         # Else auto-generate
-        import random
-        names_first = ["Chiyo", "Haku", "Taka", "Waka", "Tochi", "Koto"]
-        names_last = ["hu", "ho", "soryu", "yama", "umi", "nishiki"]
+        names_first = ["Chiyo", "Haku", "Taka", "Waka", "Tochi", "Koto", "Asa", "Haru", "Aki", "Fuyu"]
+        names_last = ["hu", "ho", "soryu", "yama", "umi", "nishiki", "fuji", "gawa", "maru", "tenro"]
         
         name = w.get("name") or (random.choice(names_first) + random.choice(names_last))
+        avatar_seed = int(time.time() * 1000) % 1000000
+        
+        # Complete wrestler initialization with all progression fields
         data = {
             "name": name,
+            "custom_name": w.get("custom_name"),
             "stable": w.get("stable", "Tatsunami"),
-            "height": w.get("height", 185),
-            "weight": w.get("weight", 150),
-            "strength": w.get("strength", 1.0),
-            "technique": w.get("technique", 1.0),
-            "speed": w.get("speed", 1.0),
+            "height": w.get("height", round(175 + random.random() * 20)),
+            "weight": w.get("weight", round(120 + random.random() * 60)),
+            "strength": w.get("strength", round(0.8 + random.random() * 0.4, 2)),
+            "technique": w.get("technique", round(0.8 + random.random() * 0.4, 2)),
+            "speed": w.get("speed", round(0.8 + random.random() * 0.4, 2)),
             "color": w.get("color", "255,0,0"),
+            # Core stats
             "wins": 0,
             "losses": 0,
-            "rank_index": 0
+            "matches": 0,
+            # Progression
+            "xp": 0,
+            "skill_points": 3,  # Start with some SP for tutorial
+            "rank_index": 0,
+            "rank_name": "Jonokuchi",
+            "rank_jp": "序ノ口",
+            "win_streak": 0,
+            # Skills
+            "unlocked_skills": [],
+            "total_bonuses": {},
+            "fighting_style": None,
+            # Profile
+            "avatar_seed": avatar_seed,
+            "bio": f"{w.get('custom_name') or name} is a rising star in sumo wrestling.",
+            "is_active": True
         }
         
         update_time, doc_ref = db.collection('wrestlers').add(data)
+        print(f"[Create] New wrestler '{data['name']}' created with ID {doc_ref.id}, SP={data['skill_points']}")
         return {"id": doc_ref.id, **data}
     except Exception as e:
         print(f"Error creating wrestler: {e}")
@@ -322,12 +447,35 @@ async def delete_wrestler(w_id: str):
     return {"success": True, "id": w_id}
 
 @app.get("/api/history")
-async def get_history(wrestler_id: str = None):
+async def get_history(wrestler_id: str = None, limit: int = 10):
     """Get match history, optionally filtered by wrestler ID."""
     db = get_db()
-    # Note: In a full implementation, you'd query a 'matches' collection
-    # For now, return empty array as placeholder
-    return []
+    query = db.collection('matches').order_by('timestamp', direction=firestore_module.Query.DESCENDING).limit(limit)
+    
+    matches = []
+    for doc in query.stream():
+        data = doc.to_dict()
+        data['id'] = doc.id
+        # Skip demo matches
+        if doc.id.startswith('demo-') or doc.id.startswith('sim-'):
+            continue
+        # Filter by wrestler if specified
+        if wrestler_id:
+            if str(data.get('p1_id')) != str(wrestler_id) and str(data.get('p2_id')) != str(wrestler_id):
+                continue
+        matches.append(data)
+    return matches
+
+@app.get("/api/matches/{match_id}")
+async def get_match_details(match_id: str):
+    """Get detailed match data including event log."""
+    db = get_db()
+    doc = db.collection('matches').document(match_id).get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Match not found")
+    data = doc.to_dict()
+    data['id'] = doc.id
+    return data
 
 @app.get("/api/skills")
 async def get_skills():
@@ -374,11 +522,58 @@ async def get_wrestler_skills(w_id: str):
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Wrestler not found")
     data = doc.to_dict()
+    
+    # Transform skill data to match frontend expectations
+    # Backend stores: {"skill_id": "str_1", "unlocked_at": "..."}
+    # Frontend expects: {"id": "str_1", ...}
+    raw_skills = data.get("unlocked_skills", [])
+    transformed_skills = []
+    for s in raw_skills:
+        if isinstance(s, dict):
+            skill_id = s.get("skill_id") or s.get("id")
+            unlocked_at = s.get("unlocked_at", "")
+        else:
+            skill_id = s
+            unlocked_at = ""
+        transformed_skills.append({
+            "id": skill_id,
+            "skill_id": skill_id,  # Keep for backward compat
+            "unlocked_at": unlocked_at
+        })
+    
     return {
         "skill_points": data.get("skill_points", 0),
-        "unlocked_skills": data.get("unlocked_skills", []),
+        "unlocked_skills": transformed_skills,
         "total_bonuses": data.get("total_bonuses", {})
     }
+
+
+def get_skill_tree_sync():
+    """Synchronous version of skill tree for internal use."""
+    return {
+        "strength": {
+            "name": "Strength", "jp": "力", "description": "Raw pushing power", "color": "220,50,50",
+            "skills": [
+                {"id": "str_1", "name": "Iron Grip", "jp": "鉄握", "desc": "+10% push force", "tier": 1, "cost": 1, "effect": {"strength": 0.1}},
+                {"id": "str_2", "name": "Mountain Push", "jp": "山押し", "desc": "+15% push force", "tier": 2, "cost": 2, "effect": {"strength": 0.15}}
+            ]
+        },
+        "technique": {
+            "name": "Technique", "jp": "技", "description": "Grappling skill", "color": "50,150,220",
+            "skills": [
+                {"id": "tech_1", "name": "Quick Hands", "jp": "速手", "desc": "+10% grab speed", "tier": 1, "cost": 1, "effect": {"technique": 0.1}},
+                {"id": "tech_2", "name": "Belt Master", "jp": "帯師", "desc": "+15% grab success", "tier": 2, "cost": 2, "effect": {"technique": 0.15}}
+            ]
+        },
+        "speed": {
+            "name": "Speed", "jp": "速", "description": "Movement and reaction", "color": "50,220,100",
+            "skills": [
+                {"id": "spd_1", "name": "Quick Step", "jp": "速歩", "desc": "+10% movement", "tier": 1, "cost": 1, "effect": {"speed": 0.1}},
+                {"id": "spd_2", "name": "Lightning Dash", "jp": "雷走", "desc": "+15% movement", "tier": 2, "cost": 2, "effect": {"speed": 0.15}}
+            ]
+        }
+    }
+
 
 @app.post("/api/wrestlers/{w_id}/skills/{skill_id}")
 async def unlock_skill(w_id: str, skill_id: str):
@@ -392,22 +587,33 @@ async def unlock_skill(w_id: str, skill_id: str):
     data = doc.to_dict()
     skill_points = data.get("skill_points", 0)
     
-    # Simple cost of 1 for now
-    cost = 1
+    # Get actual skill cost from skill tree
+    skill_tree = get_skill_tree_sync()
+    cost = 1  # Default
+    for branch in skill_tree.values():
+        for skill in branch.get("skills", []):
+            if skill.get("id") == skill_id:
+                cost = skill.get("cost", 1)
+                break
+    
     if skill_points < cost:
-        raise HTTPException(status_code=400, detail="Not enough skill points")
+        raise HTTPException(status_code=400, detail=f"Not enough skill points. Need {cost}, have {skill_points}")
     
     unlocked = data.get("unlocked_skills", [])
-    if skill_id in [s.get("skill_id") if isinstance(s, dict) else s for s in unlocked]:
+    existing_ids = [s.get("skill_id") if isinstance(s, dict) else s for s in unlocked]
+    if skill_id in existing_ids:
         raise HTTPException(status_code=400, detail="Skill already unlocked")
     
     unlocked.append({"skill_id": skill_id, "unlocked_at": str(time.time())})
+    new_sp = skill_points - cost
+    
     doc_ref.update({
-        "skill_points": skill_points - cost,
+        "skill_points": new_sp,
         "unlocked_skills": unlocked
     })
     
-    return {"success": True, "skill_id": skill_id, "cost": cost}
+    print(f"[Skill] Wrestler {w_id} unlocked '{skill_id}' for {cost} SP. Remaining: {new_sp}")
+    return {"success": True, "skill_id": skill_id, "cost": cost, "remaining_sp": new_sp}
 
 @app.post("/api/fight/action")
 async def fight_action(req: dict):

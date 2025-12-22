@@ -114,7 +114,7 @@ export function SwipeableWrestlerCard({ wrestler, onDelete }: Props) {
                                                 {/* Wins Counter */}
                                                 <div className="text-right">
                                                     <div className="font-[family-name:var(--font-dotgothic)] text-lg leading-none text-[var(--gold)]">{wrestler.wins}</div>
-                                                    <div className="text-[8px] text-muted-foreground tracking-wider">勝</div>
+                                                    <div className="text-[8px] text-muted-foreground tracking-wider">WIN</div>
                                                 </div>
                                             </div>
                                         </div>

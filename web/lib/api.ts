@@ -1,6 +1,5 @@
 export const getApiUrl = () => {
-    // Default to the Cloud Run deployment
-    // In strict dev, you can use localhost, but user requested "online"
+    // Use Cloud Run backend for production
     return process.env.NEXT_PUBLIC_API_URL || 'https://sumo-server-1056239062336.us-central1.run.app/api';
 };
 
@@ -139,13 +138,22 @@ export const api = {
         return res.json();
     },
 
-    fightAction: async (wrestlerId: string, action: 'kiai') => {
+    fightAction: async (wrestlerId: string | number, action: 'kiai' | 'push_left' | 'push_right') => {
         const res = await fetch(`${getApiUrl()}/fight/action`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ wrestler_id: wrestlerId, action })
+            body: JSON.stringify({ wrestler_id: wrestlerId, action: action.toUpperCase() })
         });
         if (!res.ok) throw new Error('Failed to perform action');
+        return res.json();
+    },
+
+    resetMatch: async () => {
+        const res = await fetch(`${getApiUrl()}/matches/clear`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (!res.ok) throw new Error('Failed to reset match');
         return res.json();
     }
 };

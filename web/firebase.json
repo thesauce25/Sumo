@@ -7,6 +7,23 @@
             "**/node_modules/**"
         ],
         "cleanUrls": true,
-        "trailingSlash": false
+        "trailingSlash": false,
+        "rewrites": [
+            {
+                "source": "**",
+                "destination": "/index.html"
+            }
+        ],
+        "headers": [
+            {
+                "source": "**/*.@(js|css|woff2|woff|ttf)",
+                "headers": [
+                    {
+                        "key": "Cache-Control",
+                        "value": "max-age=31536000, immutable"
+                    }
+                ]
+            }
+        ]
     }
 }

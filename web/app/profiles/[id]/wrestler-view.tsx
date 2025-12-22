@@ -109,9 +109,9 @@ export default function WrestlerView({ id }: { id: string }) {
 
                         {/* Stats Grid */}
                         <div className="grid grid-cols-3 gap-2 mb-4">
-                            <StatBox label="勝" value={wrestler.wins} color="var(--gold)" />
-                            <StatBox label="敗" value={wrestler.matches - wrestler.wins} color="var(--crimson)" />
-                            <StatBox label="率" value={`${winRate}%`} color="var(--jade)" />
+                            <StatBox label="WIN" value={wrestler.wins} color="var(--gold)" />
+                            <StatBox label="LOSS" value={wrestler.matches - wrestler.wins} color="var(--crimson)" />
+                            <StatBox label="RATE" value={`${winRate}%`} color="var(--jade)" />
                         </div>
 
                         {/* Attribute Bars */}

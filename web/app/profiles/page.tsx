@@ -108,7 +108,7 @@ export default function ProfilesPage() {
                         <Dialog open={open} onOpenChange={setOpen}>
                             <DialogTrigger asChild>
                                 <Button className="w-full gba-btn text-xs font-[family-name:var(--font-dotgothic)]">
-                                    <UserPlus className="mr-2 h-4 w-4" /> NYUMON (入門)
+                                    <UserPlus className="mr-2 h-4 w-4" /> CREATE WRESTLER
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="gba-panel border-2 text-foreground max-w-[90vw]">

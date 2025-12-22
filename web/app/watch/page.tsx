@@ -2,10 +2,13 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { PixelSumo } from '@/components/PixelSumo'
+import { getApiUrl } from '@/lib/api'
 import {
     WAITING_DOTS_INTERVAL_MS,
     ACTIVE_MATCH_POLL_INTERVAL_MS,
-    GAME_OVER_RESET_DELAY_MS,
+    RING_OUT_PHASE_MS,
+    DECISION_PHASE_MS,
+    WINNER_DISPLAY_MS,
     RING_SIZE,
     ENGINE_WIDTH,
     ENGINE_HEIGHT,
@@ -22,6 +25,7 @@ const DEMO_POLL_INTERVAL_MS = 50  // 20 FPS for demo mode
 const STATE_WAITING = "WAITING"
 const STATE_P1_READY = "P1_READY"
 const STATE_P2_READY = "P2_READY"
+const STATE_COUNTDOWN = "COUNTDOWN"  // 3-2-1-GO countdown
 const STATE_FIGHTING = "FIGHTING"
 const STATE_MATTA = "MATTA"
 const STATE_GAME_OVER = "GAME_OVER"
@@ -45,6 +49,7 @@ interface WrestlerState {
     custom_name?: string
     color: string
     avatar_seed?: number
+    stamina?: number
 }
 
 interface MatchState {
@@ -61,6 +66,7 @@ interface MatchState {
     p1_matta?: number
     p2_matta?: number
     matta_player?: string
+    countdown_remaining?: number  // 3-2-1-GO countdown seconds
     t: number
     is_demo?: boolean
     demo_label?: string
@@ -83,6 +89,49 @@ function ImpactParticle({ x, y, delay }: { x: number; y: number; delay: number }
     )
 }
 
+// Stamina Bar Component
+function StaminaBar({
+    percentage,
+    side,
+    color
+}: {
+    percentage: number;
+    side: 'left' | 'right';
+    color: string
+}) {
+    // Color logic: >50% Green, 20-50% Yellow, <20% Red
+    let barColor = '#4cd137'
+    if (percentage < 20) barColor = '#e84118'
+    else if (percentage < 50) barColor = '#fbc531'
+
+    return (
+        <div style={{
+            position: 'absolute',
+            [side]: 20,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: 12,
+            height: 200,
+            background: 'rgba(0,0,0,0.6)',
+            border: `2px solid rgba(255,255,255,0.2)`,
+            borderRadius: 6,
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column-reverse', // Fill from bottom
+            zIndex: 40
+        }}>
+            <div style={{
+                width: '100%',
+                height: `${percentage}%`,
+                background: barColor,
+                transition: 'height 0.1s linear, background 0.3s ease',
+                boxShadow: `0 0 10px ${barColor}`,
+                animation: percentage < 20 ? 'stamina-pulse 0.5s infinite' : 'none'
+            }} />
+        </div>
+    )
+}
+
 export default function WatchPage() {
     const [connected, setConnected] = useState(false)
     const [matchId, setMatchId] = useState<string | null>(null)
@@ -93,13 +142,15 @@ export default function WatchPage() {
     const [particles, setParticles] = useState<{ id: number; x: number; y: number }[]>([])
     const [activeSkills, setActiveSkills] = useState<{ event: SkillEvent; side: 'left' | 'right' }[]>([])
     const [showWinner, setShowWinner] = useState(false)
-    const [winnerData, setWinnerData] = useState<{ name: string; color: string; seed: number } | null>(null)
+    const [winnerData, setWinnerData] = useState<{ name: string; color: string; seed: number; loserName?: string; loserColor?: string; loserSeed?: number } | null>(null)
     const [showMatta, setShowMatta] = useState(false)
     const [mattaPlayer, setMattaPlayer] = useState<string | null>(null)
     const [showTachiai, setShowTachiai] = useState(false)
+    const [showDecision, setShowDecision] = useState(false) // SHOBU-ARI state
+    const [showRingOut, setShowRingOut] = useState(false)   // RING OUT! dramatic phase
 
-    // Demo mode state
-    const [demoMode, setDemoMode] = useState(false)
+    // Demo mode state - START IN DEMO MODE BY DEFAULT
+    const [demoMode, setDemoMode] = useState(true)
     const [demoState, setDemoState] = useState<MatchState | null>(null)
     const demoPollRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -114,7 +165,7 @@ export default function WatchPage() {
     const pollRef = useRef<NodeJS.Timeout | null>(null)
     const shakeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+    const API_BASE = getApiUrl()
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -155,10 +206,8 @@ export default function WatchPage() {
                         setShowTachiai(false)
                         setMatchId(data.match_id)
                         currentMatchIdRef.current = data.match_id
-                    } else if (!data.match_id && !demoMode && !showWinner) {
-                        // No active match and not showing winner - enable demo mode
-                        setDemoMode(true)
                     }
+                    // Note: Demo mode starts true by default, only disabled when real match found
                 }
             } catch { /* silent */ }
         }
@@ -166,7 +215,7 @@ export default function WatchPage() {
         pollRef.current = setInterval(checkForMatch, ACTIVE_MATCH_POLL_INTERVAL_MS)
         checkForMatch()
         return () => { if (pollRef.current) clearInterval(pollRef.current) }
-    }, [API_BASE, showWinner, demoMode])
+    }, [API_BASE, showWinner])
 
     const spawnParticles = useCallback((centerX: number, centerY: number) => {
         const newParticles: { id: number; x: number; y: number }[] = []
@@ -272,32 +321,73 @@ export default function WatchPage() {
                     })
                 }
 
-                // Handle game over
-                if (data.game_over && data.winner_name && !showWinner) {
+                // Handle game over - Sequence: RING OUT (3s) -> SHOBU-ARI (3s) -> WINNER (8s) -> RESET
+                if (data.game_over && data.winner_name && !showWinner && !showDecision && !showRingOut) {
                     const isP1Winner = data.winner === data.p1.id
+                    const loser = isP1Winner ? data.p2 : data.p1
                     setWinnerData({
                         name: data.winner_name,
                         color: isP1Winner ? data.p1.color : data.p2.color,
-                        seed: isP1Winner ? (data.p1.avatar_seed || 0) : (data.p2.avatar_seed || 0)
+                        seed: isP1Winner ? (data.p1.avatar_seed || 0) : (data.p2.avatar_seed || 0),
+                        loserName: loser.custom_name || loser.name,
+                        loserColor: loser.color,
+                        loserSeed: loser.avatar_seed || 0
                     })
-                    setShowWinner(true)
 
-                    winnerTimeoutRef.current = setTimeout(() => {
-                        setShowWinner(false)
-                        setWinnerData(null)
-                        setMatchId(null)
-                        setMatchState(null)
-                        setConnected(false)
-                        currentMatchIdRef.current = null
-                    }, GAME_OVER_RESET_DELAY_MS)
+                    // Phase 1: RING OUT! (dramatic pause with screen shake)
+                    setShowRingOut(true)
+                    setIsShaking(true)
+                    setTimeout(() => setIsShaking(false), 500)
+
+                    // Phase 2: Decision/SHOBU-ARI (after RING_OUT_PHASE)
+                    setTimeout(() => {
+                        setShowRingOut(false)
+                        setShowDecision(true)
+                    }, RING_OUT_PHASE_MS)
+
+                    // Phase 3: Winner Announcement (after RING_OUT + DECISION)
+                    setTimeout(() => {
+                        setShowDecision(false)
+                        setShowWinner(true)
+
+                        // Phase 4: Reset (after WINNER display)
+                        winnerTimeoutRef.current = setTimeout(() => {
+                            setShowWinner(false)
+                            setWinnerData(null)
+                            setMatchId(null)
+                            setMatchState(null)
+                            setConnected(false)
+                            currentMatchIdRef.current = null
+                        }, WINNER_DISPLAY_MS)
+                    }, RING_OUT_PHASE_MS + DECISION_PHASE_MS)
                 }
             } catch (e) {
                 console.error('[Watch] Parse error:', e)
             }
         }
 
-        ws.onerror = () => setConnectionStatus('error')
-        ws.onclose = () => setConnected(false)
+        ws.onerror = () => {
+            console.warn('[Watch] WebSocket error')
+            setConnectionStatus('error')
+        }
+
+        ws.onclose = (event) => {
+            console.warn(`[Watch] WebSocket closed: code=${event.code}, reason=${event.reason}`)
+            setConnected(false)
+
+            // Auto-reconnect after 2 seconds if match is still active
+            if (matchId && !showWinner) {
+                console.log('[Watch] Attempting reconnect in 2s...')
+                setTimeout(() => {
+                    // Force a re-render by clearing and resetting matchId
+                    // This triggers the useEffect to create a new WebSocket
+                    setMatchId(null)
+                    setTimeout(() => {
+                        setMatchId(matchId)
+                    }, 100)
+                }, 2000)
+            }
+        }
 
         return () => {
             ws.close()
@@ -305,8 +395,10 @@ export default function WatchPage() {
         }
     }, [matchId, spawnParticles, showWinner])
 
+    // Standard position updates from network
     useEffect(() => {
-        if (!matchState) return
+        if (!matchState || showRingOut) return // Skip standard updates if showing ring out
+
         const lerp = (a: number, b: number, t: number) => a + (b - a) * t
         setDisplayP1(prev => {
             if (!prev) return { x: matchState.p1.x, y: matchState.p1.y }
@@ -316,7 +408,60 @@ export default function WatchPage() {
             if (!prev) return { x: matchState.p2.x, y: matchState.p2.y }
             return { x: lerp(prev.x, matchState.p2.x, POSITION_LERP_FACTOR), y: lerp(prev.y, matchState.p2.y, POSITION_LERP_FACTOR) }
         })
-    }, [matchState])
+    }, [matchState, showRingOut])
+
+    // Active animation loop for Ring Out (runs independently of network)
+    useEffect(() => {
+        if (!showRingOut || !matchState) return
+
+        const isP1Winner = matchState.winner === matchState.p1.id
+        const p1IsLoser = !!matchState.winner_name && !isP1Winner
+        const p2IsLoser = !!matchState.winner_name && isP1Winner
+
+        // Helper to calculate target position well outside the ring
+        const getTargetPos = (wrestlerPos: { x: number, y: number }, isLoser: boolean) => {
+            if (!isLoser) return wrestlerPos
+
+            const centerX = ENGINE_WIDTH / 2
+            const centerY = ENGINE_HEIGHT / 2
+            const dx = wrestlerPos.x - centerX
+            const dy = wrestlerPos.y - centerY
+            const currentDist = Math.sqrt(dx * dx + dy * dy) || 1
+
+            const TARGET_DIST = 35 // Push even further out (was 28)
+            const scale = TARGET_DIST / currentDist
+            return { x: centerX + dx * scale, y: centerY + dy * scale }
+        }
+
+        const p1Target = getTargetPos(matchState.p1, p1IsLoser)
+        const p2Target = getTargetPos(matchState.p2, p2IsLoser)
+
+        let animationFrameId: number
+
+        const animate = () => {
+            // Slower lerp for dramatic "falling out" effect
+            const FALL_LERP = 0.05
+
+            setDisplayP1(prev => {
+                if (!prev) return prev
+                return {
+                    x: prev.x + (p1Target.x - prev.x) * FALL_LERP,
+                    y: prev.y + (p1Target.y - prev.y) * FALL_LERP
+                }
+            })
+            setDisplayP2(prev => {
+                if (!prev) return prev
+                return {
+                    x: prev.x + (p2Target.x - prev.x) * FALL_LERP,
+                    y: prev.y + (p2Target.y - prev.y) * FALL_LERP
+                }
+            })
+            animationFrameId = requestAnimationFrame(animate)
+        }
+
+        animate()
+        return () => cancelAnimationFrame(animationFrameId)
+    }, [showRingOut]) // Run only when entering/exiting ring out phase
 
     const engineToRing = (engineX: number, engineY: number) => ({
         x: (engineX / ENGINE_WIDTH) * RING_SIZE,
@@ -513,9 +658,35 @@ export default function WatchPage() {
                 @keyframes skill-popup { 0% { transform: translateY(20px) scale(0.8); opacity: 0; } 15% { transform: translateY(0) scale(1.1); opacity: 1; } 30% { transform: scale(1); } 85% { opacity: 1; } 100% { transform: translateY(-10px); opacity: 0; } }
                 @keyframes winner-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
                 @keyframes matta-flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-                @keyframes tachiai-burst { 0% { transform: scale(0.5); opacity: 0; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+                @keyframes tachiai-burst { 
+                    0% { transform: scale(0.5); opacity: 0; } 
+                    50% { transform: scale(1.2); opacity: 1; } 
+                    100% { transform: scale(1); opacity: 1; } 
+                }
+                @keyframes ringout-pulse {
+                    0% { opacity: 0.8; box-shadow: inset 0 0 50px rgba(255, 0, 0, 0.5); }
+                    100% { opacity: 1; box-shadow: inset 0 0 150px rgba(255, 0, 0, 0.8); }
+                }
                 @keyframes edge-pulse { 0%, 100% { box-shadow: 0 0 20px rgba(255, 0, 0, 0.3); } 50% { box-shadow: 0 0 40px rgba(255, 0, 0, 0.8); } }
+                @keyframes stamina-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+                @keyframes countdown-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
             `}</style>
+
+            {/* Stamina Bars */}
+            {matchState?.p1 && (
+                <StaminaBar
+                    percentage={matchState.p1.stamina ?? 100}
+                    side="left"
+                    color={matchState.p1.color}
+                />
+            )}
+            {matchState?.p2 && (
+                <StaminaBar
+                    percentage={matchState.p2.stamina ?? 100}
+                    side="right"
+                    color={matchState.p2.color}
+                />
+            )}
 
             {/* Skill Popups */}
             <div style={{ position: 'fixed', left: 20, top: '40%', zIndex: 60 }}>
@@ -569,6 +740,37 @@ export default function WatchPage() {
                 </div>
             )}
 
+            {/* COUNTDOWN Overlay - 3...2...1...GO! */}
+            {matchState?.state === STATE_COUNTDOWN && matchState.countdown_remaining !== undefined && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.7)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 90
+                }}>
+                    <div style={{ textAlign: 'center', animation: 'countdown-pulse 1s infinite' }}>
+                        <p style={{
+                            fontSize: 120,
+                            color: '#ffcc00',
+                            textShadow: '4px 4px 0 #000, 0 0 50px rgba(255, 204, 0, 0.5)',
+                            margin: 0,
+                            fontFamily: PIXEL_FONT
+                        }}>
+                            {Math.ceil(matchState.countdown_remaining)}
+                        </p>
+                        <p style={{
+                            fontSize: 24,
+                            color: '#fff',
+                            marginTop: 20,
+                            textShadow: '2px 2px 0 #000'
+                        }}>
+                            {matchState.countdown_remaining > 2 ? '三' : matchState.countdown_remaining > 1 ? '二' : '一'}
+                        </p>
+                        <p style={{ fontSize: 14, color: '#aaa', marginTop: 30 }}>GET READY!</p>
+                    </div>
+                </div>
+            )}
+
             {/* TACHIAI Burst */}
             {showTachiai && (
                 <div style={{
@@ -591,14 +793,14 @@ export default function WatchPage() {
                 </div>
             )}
 
-            {/* Match Header - P1 (East) Left, P2 (West) Right */}
+            {/* Match Header - P1 (West) Left, P2 (East) Right */}
             <div style={{ display: 'flex', justifyContent: 'space-between', width: RING_SIZE, marginBottom: 20, alignItems: 'center' }}>
                 <div style={{ textAlign: 'left' }}>
                     <p style={{ fontSize: 14, color: `rgb(${matchState?.p1?.color || '255,255,255'})`, textShadow: '2px 2px 0 #000', margin: 0 }}>
                         {matchState?.p1 ? getWrestlerName(matchState.p1) : 'P1'}
                     </p>
                     {matchState?.p1_matta ? <p style={{ fontSize: 10, color: '#ff6666', margin: 0 }}>MATTA: {matchState.p1_matta}/2</p> : null}
-                    <p style={{ fontSize: 10, color: '#888', margin: 0 }}>EAST</p>
+                    <p style={{ fontSize: 10, color: '#888', margin: 0 }}>WEST</p>
                 </div>
                 <span style={{ fontSize: 12, color: '#c9a227' }}>VS</span>
                 <div style={{ textAlign: 'right' }}>
@@ -606,7 +808,7 @@ export default function WatchPage() {
                         {matchState?.p2 ? getWrestlerName(matchState.p2) : 'P2'}
                     </p>
                     {matchState?.p2_matta ? <p style={{ fontSize: 10, color: '#ff6666', margin: 0 }}>MATTA: {matchState.p2_matta}/2</p> : null}
-                    <p style={{ fontSize: 10, color: '#888', margin: 0 }}>WEST</p>
+                    <p style={{ fontSize: 10, color: '#888', margin: 0 }}>EAST</p>
                 </div>
             </div>
 
@@ -651,6 +853,62 @@ export default function WatchPage() {
                 )}
             </div>
 
+            {/* RING OUT! Overlay - Dramatic moment of victory */}
+            {showRingOut && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(100, 0, 0, 0.4)', // Red tint for drama
+                    border: '8px solid #ff3333',
+                    boxShadow: 'inset 0 0 100px rgba(255, 0, 0, 0.5)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 96,
+                    animation: 'ringout-pulse 0.5s ease-in-out infinite alternate'
+                }}>
+                    <div style={{ textAlign: 'center' }}>
+                        <p style={{
+                            fontSize: 72,
+                            color: '#ff3333',
+                            textShadow: '4px 4px 0 #000, -2px -2px 0 #000',
+                            fontFamily: PIXEL_FONT,
+                            margin: 0,
+                            animation: 'tachiai-burst 0.5s ease-out forwards'
+                        }}>
+                            RING OUT!
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Decision Overlay - SHOBU-ARI */}
+            {showDecision && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.3)', // Semi-transparent to see the ring out
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 95
+                }}>
+                    <div style={{ textAlign: 'center', animation: 'tachiai-burst 0.5s ease-out forwards' }}>
+                        <p style={{
+                            fontSize: 60,
+                            color: '#fff',
+                            textShadow: '4px 4px 0 #000',
+                            fontFamily: PIXEL_FONT,
+                            margin: 0
+                        }}>
+                            SHOBU-ARI!
+                        </p>
+                        <p style={{
+                            fontSize: 24,
+                            color: '#ffcc00',
+                            marginTop: 10,
+                            textShadow: '2px 2px 0 #000'
+                        }}>
+                            MATCH CONCLUDED
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Winner Overlay */}
             {showWinner && winnerData && (
                 <div style={{
@@ -659,7 +917,7 @@ export default function WatchPage() {
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                     zIndex: 100
                 }}>
-                    <p style={{ fontSize: 16, color: '#888', marginBottom: 10 }}>勝者</p>
+                    <p style={{ fontSize: 16, color: '#888', marginBottom: 10 }}>WINNER</p>
                     <p style={{ fontSize: 24, color: '#ffcc00', marginBottom: 30, textShadow: '2px 2px 0 #000' }}>WINNER</p>
                     <div style={{ marginBottom: 20, animation: 'winner-pulse 1s infinite' }}>
                         <PixelSumo seed={winnerData.seed} color={winnerData.color} size={128} />

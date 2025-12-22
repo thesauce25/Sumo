@@ -35,6 +35,7 @@ SKILL_MOVES = {
 STATE_WAITING = "WAITING"      # Both wrestlers ready, waiting for tachiai
 STATE_P1_READY = "P1_READY"    # P1 pressed, waiting for P2
 STATE_P2_READY = "P2_READY"    # P2 pressed, waiting for P1
+STATE_COUNTDOWN = "COUNTDOWN"  # 3-2-1-GO countdown before fight
 STATE_FIGHTING = "FIGHTING"    # Tachiai successful, fight in progress
 STATE_MATTA = "MATTA"          # False start, resetting
 STATE_GAME_OVER = "GAME_OVER"
@@ -43,16 +44,17 @@ class SumoEngine:
     """
     Pure Python Game Engine with authentic sumo mechanics.
     Features: Tachiai sync, edge resistance, extended matches.
+    Target match duration: 10-15 seconds
     """
     # --- Physics Constants ---
     RING_RADIUS = 14.0
     WRESTLER_RADIUS = 2.0
-    FRICTION = 0.82  # Faster momentum decay for snappier feel (was 0.92)
-    MIN_COLLISION_DIST = 4.0  # Tighter collision for closer battles (was 4.5)
+    FRICTION = 0.88  # Lower friction = faster movement (was 0.92)
+    MIN_COLLISION_DIST = 4.0  # Tighter collision for closer battles
     
-    # Push force tuning - each PUSH should move opponent noticeably
-    PUSH_FORCE_PER_INPUT = 0.09  # Iteration 3: tuned for 20-30s matches
-    EDGE_RESISTANCE_MULT = 2.0   # Dramatic edge fights while allowing finishes (tuned from 4.0)
+    # Push force tuning - increased for faster matches
+    PUSH_FORCE_PER_INPUT = 0.75  # Strong hits for quick matches (was 0.55)
+    EDGE_RESISTANCE_MULT = 0.6   # Low resistance near edge (was 0.8)
     
     # Tachiai settings
     TACHIAI_SYNC_WINDOW_MS = 150  # 150ms window for simultaneous press
@@ -65,19 +67,28 @@ class SumoEngine:
     
     # Clinch Physics
     CLINCH_MAX_DIST = 8.0     # Distance to start pulling together
-    CLINCH_FORCE = 0.15       # Attractive force strength
+    CLINCH_FORCE = 0.02       # Almost zero stickiness
     
-    # Stamina System (Proven-Better-New)
+    # Stamina System (tuned for 10-15s matches)
     STAMINA_MAX = 100.0
-    STAMINA_COST_PUSH = 20.0
-    STAMINA_REGEN_RATE = 20.0  # Per second (approx 5 sec to full)
-    FATIGUE_PENALTY = 0.3      # Force multiplier when out of stamina
+    STAMINA_COST_PUSH = 12.0   # Slightly lower cost (was 15.0)
+    STAMINA_REGEN_RATE = 20.0  # Faster regen (was 15.0)
+    FATIGUE_PENALTY = 0.6      # Less penalty when tired (was 0.5)
     FATIGUE_THRESHOLD = 10.0   # Consider fatigued below this
     
+    # Directional Push / Counter System
+    COUNTER_BONUS = 1.5        # 50% bonus when counter-hitting
+    CLASH_STAMINA_MULT = 2.0   # Double stamina drain on clash
+    PREDICTABILITY_PENALTY = 0.8  # 20% penalty for predictable inputs
+    PREDICTABILITY_STREAK = 3  # Inputs in a row before penalty kicks in
+    
     # Bot / Simulation Settings
-    BOT_ACTION_INTERVAL_MIN = 0.08  # Fastest mash speed (seconds) - increased from 0.15
-    BOT_ACTION_INTERVAL_MAX = 0.20  # Slowest mash speed - reduced from 0.35
+    BOT_ACTION_INTERVAL_MIN = 0.06  # Faster mashing (was 0.08)
+    BOT_ACTION_INTERVAL_MAX = 0.15  # Faster mashing (was 0.20)
     BOT_TACHIAI_DELAY = 0.05       # Delay after effective "GO" signal
+    
+    # Countdown Settings
+    COUNTDOWN_DURATION = 3.0  # 3 second countdown (3...2...1...GO!)
     
     def __init__(self, simulation_mode=False):
         self.WIDTH = 64
@@ -113,6 +124,23 @@ class SumoEngine:
         self.p1_push_count = 0
         self.p2_push_count = 0
         
+        # Directional Push Tracking (for counter detection)
+        self.p1_last_action: Optional[str] = None  # 'LEFT' or 'RIGHT'
+        self.p2_last_action: Optional[str] = None
+        self.p1_action_streak: int = 0  # Same direction streak count
+        self.p2_action_streak: int = 0
+        self.p1_last_action_time: float = 0.0
+        self.p2_last_action_time: float = 0.0
+        
+        # Countdown tracking
+        self.countdown_remaining: float = 0.0
+        self.countdown_start_time: Optional[float] = None
+        
+        # Match Event Log (for replay/debugging)
+        self.match_log: List[Dict[str, Any]] = []
+        self.match_start_time: Optional[float] = None
+        self.match_id: str = f"m-{int(time.time())}"
+        
         # Wrestler 1 (West/Left - shown at top of controller)
         self.p1 = {
             "id": "p1",
@@ -143,10 +171,10 @@ class SumoEngine:
             "last_push_time": 0.0
         }
         
-        # In simulation mode, give slight asymmetry so matches don't stalemate
+        # In simulation mode, give significant asymmetry so matches don't stalemate
         if simulation_mode:
-            self.p1['strength'] = 1.1  # Slight advantage to P1
-            self.p2['strength'] = 0.9
+            self.p1['strength'] = 1.25  # P1 advantage to ensure quick resolution
+            self.p2['strength'] = 0.75
         
         self._save_start_positions()
         
@@ -157,16 +185,31 @@ class SumoEngine:
         self.p2_start_x = self.p2['x']
         self.p2_start_y = self.p2['y']
         
-    def force_start(self):
-        """Force start the match immediately - for prototype/single-device testing.
-        Skips the Tachiai sync requirement and goes straight to FIGHTING."""
-        self.state = STATE_FIGHTING
-        self._apply_tachiai_charge()
-        self.pending_events.append({
-            "type": "tachiai",
-            "message": "TACHIAI!",
-            "timestamp": self.timestamp
-        })
+    def force_start(self, skip_countdown: bool = False):
+        """Force start the match - for prototype/single-device testing.
+        Args:
+            skip_countdown: If True, skip 3-2-1 countdown and start immediately (for simulations)
+        """
+        if skip_countdown or self.simulation_mode:
+            # Skip countdown for simulations
+            self.state = STATE_FIGHTING
+            self._apply_tachiai_charge()
+            self.pending_events.append({
+                "type": "tachiai",
+                "message": "TACHIAI!",
+                "timestamp": self.timestamp
+            })
+        else:
+            # Start 3-2-1 countdown
+            self.state = STATE_COUNTDOWN
+            self.countdown_remaining = self.COUNTDOWN_DURATION
+            self.countdown_start_time = self.timestamp
+            self.pending_events.append({
+                "type": "countdown_start",
+                "message": "GET READY!",
+                "duration": self.COUNTDOWN_DURATION,
+                "timestamp": self.timestamp
+            })
         
     def _reset_positions(self):
         """Reset wrestlers to starting positions after matta"""
@@ -197,6 +240,38 @@ class SumoEngine:
         self.p2['technique'] = float(p2_data.get('technique', 1.0))
         self.p2['speed'] = float(p2_data.get('speed', 1.0))
         self.p2['mass'] = float(p2_data.get('weight', 150)) / 150.0
+
+    def _log_event(self, event_type: str, data: Dict[str, Any] = None):
+        """Log a match event for replay/debugging"""
+        event = {
+            "t": round(self.timestamp, 3),
+            "type": event_type
+        }
+        if data:
+            event.update(data)
+        self.match_log.append(event)
+        
+    def get_match_summary(self) -> Dict[str, Any]:
+        """Get complete match data for persistence"""
+        return {
+            "match_id": self.match_id,
+            "p1": {
+                "id": self.p1.get('id'),
+                "name": self.p1.get('custom_name') or self.p1.get('name'),
+                "color": self.p1.get('color')
+            },
+            "p2": {
+                "id": self.p2.get('id'),
+                "name": self.p2.get('custom_name') or self.p2.get('name'),
+                "color": self.p2.get('color')
+            },
+            "winner_id": self.winner_id if self.game_over else None,
+            "winner_name": self.winner_name if self.game_over else None,
+            "duration_seconds": round(self.timestamp - (self.match_start_time or 0), 2),
+            "p1_push_count": self.p1_push_count,
+            "p2_push_count": self.p2_push_count,
+            "events": self.match_log
+        }
 
     def _get_edge_resistance(self, wrestler: Dict) -> float:
         """Calculate resistance multiplier based on distance from center"""
@@ -293,6 +368,7 @@ class SumoEngine:
             opponent_wrestler = None
             pusher_name = None
             opponent_name = None
+            is_p1 = False
             
             if normalized_player_id == normalized_p1_id:
                 pushing_wrestler = self.p1  # This wrestler is doing the pushing
@@ -300,20 +376,55 @@ class SumoEngine:
                 pusher_name = self.p1.get('custom_name') or self.p1.get('name', 'P1')
                 opponent_name = self.p2.get('custom_name') or self.p2.get('name', 'P2')
                 self.p1_push_count += 1
+                is_p1 = True
             elif normalized_player_id == normalized_p2_id:
                 pushing_wrestler = self.p2  # This wrestler is doing the pushing
                 opponent_wrestler = self.p1  # This wrestler gets pushed
                 pusher_name = self.p2.get('custom_name') or self.p2.get('name', 'P2')
                 opponent_name = self.p1.get('custom_name') or self.p1.get('name', 'P1')
                 self.p2_push_count += 1
+                is_p1 = False
             else:
                 # Debug: ID mismatch - log for troubleshooting
                 print(f"[Engine] WARN: Unknown player_id '{normalized_player_id}' - p1='{normalized_p1_id}', p2='{normalized_p2_id}'")
             
-            if pushing_wrestler and opponent_wrestler and action in ("PUSH", "KIAI"):
-                self._apply_push(pushing_wrestler, opponent_wrestler)
-                # Debug log: confirm push direction
-                # print(f"[Engine] PUSH: {pusher_name} pushed {opponent_name} | Opponent now at x={opponent_wrestler['x']:.2f}")
+            # Accepted actions: PUSH, KIAI, PUSH_LEFT, PUSH_RIGHT
+            valid_actions = ("PUSH", "KIAI", "PUSH_LEFT", "PUSH_RIGHT")
+            
+            if pushing_wrestler and opponent_wrestler and action in valid_actions:
+                # Extract direction from action (LEFT, RIGHT, or random for PUSH/KIAI)
+                if action == "PUSH_LEFT":
+                    direction = "LEFT"
+                elif action == "PUSH_RIGHT":
+                    direction = "RIGHT"
+                else:
+                    # Legacy PUSH/KIAI: pick random direction for backward compatibility
+                    direction = random.choice(["LEFT", "RIGHT"])
+                
+                # Track this action for counter detection
+                if is_p1:
+                    # Check for predictability streak
+                    if self.p1_last_action == direction:
+                        self.p1_action_streak += 1
+                    else:
+                        self.p1_action_streak = 1
+                    self.p1_last_action = direction
+                    self.p1_last_action_time = self.timestamp
+                else:
+                    if self.p2_last_action == direction:
+                        self.p2_action_streak += 1
+                    else:
+                        self.p2_action_streak = 1
+                    self.p2_last_action = direction
+                    self.p2_last_action_time = self.timestamp
+                
+                # Apply push with direction context
+                self._log_event("push", {
+                    "player": "p1" if is_p1 else "p2",
+                    "direction": direction,
+                    "stamina": pushing_wrestler.get('stamina', 100)
+                })
+                self._apply_push(pushing_wrestler, opponent_wrestler, direction, is_p1)
                 
     def _trigger_matta(self, offending_player: str):
         """Trigger false start"""
@@ -346,51 +457,132 @@ class SumoEngine:
     def _apply_tachiai_charge(self):
         """Both wrestlers charge toward each other at tachiai"""
         # Slower charge so players can see the approach
-        charge_speed = 0.4
-        # P1 is on Right, moves Left (-x)
-        self.p1['vx'] = -charge_speed
-        # P2 is on Left, moves Right (+x)
-        self.p2['vx'] = charge_speed
+        charge_speed = 0.8  # Increased from 0.4 to ensure contact
+        # P1 is on Left (West), moves Right (+x)
+        self.p1['vx'] = charge_speed
+        # P2 is on Right (East), moves Left (-x)
+        self.p2['vx'] = -charge_speed
         
-    def _apply_push(self, pushing_wrestler: Dict, opponent_wrestler: Dict):
+    def _apply_push(self, pushing_wrestler: Dict, opponent_wrestler: Dict, direction: str = "LEFT", is_p1: bool = True):
         """
-        Apply push force: the pushing_wrestler pushes the opponent_wrestler AWAY.
-        In sumo, when you push, your opponent moves away from you.
-        Includes Stamina cost.
+        Apply push force with directional counter-detection.
+        - Counter-hit: Opposing directions = +50% force (amplified by technique)
+        - Clash: Same directions = double stamina cost
+        - Predictability: 3+ same inputs = -20% force
         """
-        # Stamina Check
+        # --- Stamina Check ---
         current_stamina = pushing_wrestler.get('stamina', 100.0)
         fatigue_mult = 1.0
+        stamina_cost = self.STAMINA_COST_PUSH
         
-        if current_stamina >= self.STAMINA_COST_PUSH:
-            # Full power push
-            pushing_wrestler['stamina'] = current_stamina - self.STAMINA_COST_PUSH
+        # --- Counter Detection ---
+        counter_mult = 1.0
+        is_counter = False
+        is_clash = False
+        
+        # Get opponent's last action (within a reasonable time window - 0.5s)
+        action_window = 0.5
+        if is_p1:
+            opponent_last_action = self.p2_last_action
+            opponent_last_time = self.p2_last_action_time
+            my_streak = self.p1_action_streak
+        else:
+            opponent_last_action = self.p1_last_action
+            opponent_last_time = self.p1_last_action_time
+            my_streak = self.p2_action_streak
+        
+        # Check if opponent acted recently enough for counter/clash detection
+        if opponent_last_action and (self.timestamp - opponent_last_time) < action_window:
+            if direction != opponent_last_action:
+                # COUNTER HIT! (opposite directions)
+                is_counter = True
+                # Technique amplifies counter bonus: base 1.5x, up to ~2.0x with max technique
+                technique = pushing_wrestler.get('technique', 1.0)
+                technique_bonus = 1.0 + (technique - 1.0) * 0.3  # 1.0 -> 1.0, 1.5 -> 1.15
+                counter_mult = self.COUNTER_BONUS * technique_bonus
+            else:
+                # CLASH! (same direction) - double stamina cost
+                is_clash = True
+                stamina_cost *= self.CLASH_STAMINA_MULT
+        
+        # --- Predictability Penalty ---
+        predictability_mult = 1.0
+        if my_streak >= self.PREDICTABILITY_STREAK:
+            predictability_mult = self.PREDICTABILITY_PENALTY
+        
+        # --- Apply Stamina Cost ---
+        if current_stamina >= stamina_cost:
+            pushing_wrestler['stamina'] = current_stamina - stamina_cost
         else:
             # Fatigued push (weak)
             fatigue_mult = self.FATIGUE_PENALTY
-            pushing_wrestler['stamina'] = 0 # Drain remainder
+            pushing_wrestler['stamina'] = 0
             
         pushing_wrestler['last_push_time'] = self.timestamp
 
-        # Direction vector FROM the pusher TO the opponent
+        # --- Direction Vector ---
         dx = opponent_wrestler['x'] - pushing_wrestler['x']
         dy = opponent_wrestler['y'] - pushing_wrestler['y']
         dist = math.sqrt(dx*dx + dy*dy) or 1.0
         
-        # Normalize direction
         nx = dx / dist
         ny = dy / dist
         
-        # Calculate push force (reduced by opponent's edge resistance - harder to push them out near edge)
+        # --- Calculate Force ---
         edge_resistance = self._get_edge_resistance(opponent_wrestler)
         base_force = self.PUSH_FORCE_PER_INPUT * pushing_wrestler.get('strength', 1.0)
         
-        # FINAL FORCE: Base * Fatigue * EdgeResistance
-        effective_force = (base_force * fatigue_mult) / edge_resistance
+        # FINAL FORCE: Base * Fatigue * Counter * Predictability / EdgeResistance
+        effective_force = (base_force * fatigue_mult * counter_mult * predictability_mult) / edge_resistance
         
-        # Push the OPPONENT away from the pusher (this is the core sumo mechanic)
-        opponent_wrestler['vx'] += nx * effective_force
-        opponent_wrestler['vy'] += ny * effective_force * 0.3  # Less vertical movement
+        # CHAOS VARIANCE (reduced on counter for more consistent counter hits)
+        if is_counter:
+            variance_mult = random.uniform(0.9, 1.3)  # Tighter variance on counters
+        else:
+            variance_mult = random.uniform(0.7, 2.0)
+        effective_force *= variance_mult
+        
+        # --- Emit Events ---
+        pusher_name = pushing_wrestler.get('custom_name') or pushing_wrestler.get('name', 'Unknown')
+        
+        if is_counter:
+            self.pending_events.append({
+                "type": "counter",
+                "wrestler_id": pushing_wrestler['id'],
+                "wrestler_name": pusher_name,
+                "direction": direction,
+                "multiplier": counter_mult,
+                "timestamp": self.timestamp
+            })
+            self._log_event("counter", {
+                "player": "p1" if is_p1 else "p2",
+                "multiplier": round(counter_mult, 2)
+            })
+        elif is_clash:
+            self.pending_events.append({
+                "type": "clash",
+                "wrestler_id": pushing_wrestler['id'],
+                "wrestler_name": pusher_name,
+                "timestamp": self.timestamp
+            })
+            self._log_event("clash", {
+                "player": "p1" if is_p1 else "p2"
+            })
+
+        HIT_RANGE = 6.0
+        
+        if dist > HIT_RANGE:
+            # WHIFF / LUNGE - Too far to hit, so move closer
+            pushing_wrestler['vx'] += nx * effective_force * 1.5
+            pushing_wrestler['vy'] += ny * effective_force * 0.5
+        else:
+            # HIT - Push opponent AWAY
+            opponent_wrestler['vx'] += nx * effective_force
+            opponent_wrestler['vy'] += ny * effective_force * 0.3
+            
+            # FATIGUE SLIP (Risk of pushing while tired)
+            if fatigue_mult < 1.0 and random.random() < 0.15:
+                pushing_wrestler['vx'] -= nx * effective_force * 0.5
         
     def _trigger_skill_event(self, wrestler: Dict, opponent: Dict, dominance: float):
         """Trigger a skill popup based on wrestler stats"""
@@ -451,6 +643,23 @@ class SumoEngine:
                 self.matta_player = None
                 self.state = STATE_WAITING
             return self.get_state()
+        
+        # Handle COUNTDOWN state (3...2...1...GO!)
+        if self.state == STATE_COUNTDOWN:
+            self.countdown_remaining -= dt
+            
+            # Emit countdown events at each second
+            if self.countdown_remaining <= 0:
+                # Countdown finished - START FIGHTING!
+                self.state = STATE_FIGHTING
+                self.countdown_remaining = 0
+                self._apply_tachiai_charge()
+                self.pending_events.append({
+                    "type": "tachiai",
+                    "message": "TACHIAI!",
+                    "timestamp": self.timestamp
+                })
+            return self.get_state()
             
         # Handle WAITING/READY timeout (auto-matta if one player waits too long)
         if self.state in (STATE_P1_READY, STATE_P2_READY):
@@ -477,7 +686,9 @@ class SumoEngine:
             p['y'] += p['vy']
             
             # Stamina Regen
-            if (self.timestamp - p.get('last_push_time', 0)) > 0.5: # Wait 0.5s after push to START regen
+            if self.simulation_mode:
+                p['stamina'] = self.STAMINA_MAX
+            elif (self.timestamp - p.get('last_push_time', 0)) > 0.5: # Wait 0.5s after push to START regen
                 p['stamina'] = min(self.STAMINA_MAX, p.get('stamina', 0) + (self.STAMINA_REGEN_RATE * dt))
             
         # 2. Collision Detection & Resolution
@@ -543,13 +754,15 @@ class SumoEngine:
             print(f"[Engine] GAME OVER: P1 Ring Out! Dist={dist_p1:.2f} > {self.RING_RADIUS}")
             self.game_over = True
             self.state = STATE_GAME_OVER
-            self.winner_id = "p2"
+            # Use actual wrestler ID (not literal "p2") so frontend can match color correctly
+            self.winner_id = self.p2.get('id', 'p2')
             self.winner_name = self.p2.get('custom_name') or self.p2.get('name', 'P2')
         elif dist_p2 > self.RING_RADIUS:
             print(f"[Engine] GAME OVER: P2 Ring Out! Dist={dist_p2:.2f} > {self.RING_RADIUS}")
             self.game_over = True
             self.state = STATE_GAME_OVER
-            self.winner_id = "p1"
+            # Use actual wrestler ID (not literal "p1") so frontend can match color correctly
+            self.winner_id = self.p1.get('id', 'p1')
             self.winner_name = self.p1.get('custom_name') or self.p1.get('name', 'P1')
 
         return self.get_state()
@@ -577,11 +790,15 @@ class SumoEngine:
         # 2. FIGHTING SPAM
         # During the fight, mash buttons 
         if self.state == STATE_FIGHTING:
+            # Get actual wrestler IDs (may be "demo_p1" etc, not just "p1")
+            p1_id = self.p1.get('id', 'p1')
+            p2_id = self.p2.get('id', 'p2')
+            
              # P1 Bot
             if current_timestamp >= self.bot_p1_next_action:
                 # Bot Stamina Logic: STOP if too tired (lowered from 30 to reduce stalemates)
                 if self.p1.get('stamina', 100) > 5:
-                    self.handle_input("p1", "PUSH")
+                    self.handle_input(p1_id, "PUSH")
                 else:
                     # Resting...
                     pass
@@ -594,7 +811,7 @@ class SumoEngine:
             if current_timestamp >= self.bot_p2_next_action:
                 # Bot Stamina Logic: P2 rests earlier (20 vs 5) to create asymmetry and prevent stalemates
                  if self.p2.get('stamina', 100) > 20:
-                    self.handle_input("p2", "PUSH")
+                    self.handle_input(p2_id, "PUSH")
                  else:
                     # Resting
                     pass
@@ -621,6 +838,7 @@ class SumoEngine:
             "p1_matta": self.p1_matta_count,
             "p2_matta": self.p2_matta_count,
             "matta_player": self.matta_player,
+            "countdown_remaining": round(self.countdown_remaining, 1),  # For UI display
             "p1": self.p1,
             "p2": self.p2
         }

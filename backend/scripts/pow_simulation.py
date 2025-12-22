@@ -27,8 +27,8 @@ from app.core.engine import SumoEngine, STATE_FIGHTING, STATE_GAME_OVER, STATE_W
 # ============================================================================
 SIMULATION_FPS = 60
 NUM_MATCHES = 10
-TARGET_MIN_DURATION = 20.0  # Target range: 20-30 seconds
-TARGET_MAX_DURATION = 30.0
+TARGET_MIN_DURATION = 10.0  # Target range: 10-15 seconds
+TARGET_MAX_DURATION = 15.0
 
 # User behavior profiles for simulation
 USER_PERSONAS = [

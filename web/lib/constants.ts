@@ -8,7 +8,9 @@ export const WRESTLER_POLL_INTERVAL_MS = 5000;
 export const STATUS_POLL_INTERVAL_MS = 1000;
 export const ACTIVE_MATCH_POLL_INTERVAL_MS = 2000;
 export const WAITING_DOTS_INTERVAL_MS = 500;
-export const GAME_OVER_RESET_DELAY_MS = 10000;  // 10 seconds for winner screen
+export const RING_OUT_PHASE_MS = 5000;      // "RING OUT!" dramatic pause
+export const DECISION_PHASE_MS = 5000;       // "SHOBU-ARI" decision announcement
+export const WINNER_DISPLAY_MS = 8000;       // Winner celebration screen
 export const SKILL_POPUP_DURATION_MS = 1500;  // How long skill popups display
 
 // --- UI Constants ---
