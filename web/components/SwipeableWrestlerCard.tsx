@@ -86,7 +86,7 @@ export function SwipeableWrestlerCard({ wrestler, onDelete }: Props) {
                                         <div className="flex justify-between items-start">
                                             <div className="min-w-0">
                                                 <h3 className="font-[family-name:var(--font-dotgothic)] text-sm leading-none truncate" style={{ color: `rgb(${wrestler.color})` }}>
-                                                    {wrestler.custom_name ? wrestler.custom_name.toUpperCase() : wrestler.name.toUpperCase()}
+                                                    {(wrestler.custom_name || wrestler.name || "Unknown")?.toUpperCase()}
                                                 </h3>
                                                 <div className="flex gap-2 items-center text-[10px] text-muted-foreground mt-1">
                                                     <span>{wrestler.stable}-BEYA</span>

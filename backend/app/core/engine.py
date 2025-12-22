@@ -37,6 +37,7 @@ STATE_P1_READY = "P1_READY"    # P1 pressed, waiting for P2
 STATE_P2_READY = "P2_READY"    # P2 pressed, waiting for P1
 STATE_COUNTDOWN = "COUNTDOWN"  # 3-2-1-GO countdown before fight
 STATE_FIGHTING = "FIGHTING"    # Tachiai successful, fight in progress
+STATE_RING_OUT = "RING_OUT"    # One wrestler crossed edge, physics continuing for effect
 STATE_MATTA = "MATTA"          # False start, resetting
 STATE_GAME_OVER = "GAME_OVER"
 
@@ -140,6 +141,7 @@ class SumoEngine:
         self.match_log: List[Dict[str, Any]] = []
         self.match_start_time: Optional[float] = None
         self.match_id: str = f"m-{int(time.time())}"
+        self.ring_out_cooldown = 0
         
         # Wrestler 1 (West/Left - shown at top of controller)
         self.p1 = {
@@ -732,6 +734,21 @@ class SumoEngine:
                     self._trigger_matta("p2")
             return self.get_state()
         
+        # Handle RING_OUT physics cooldown
+        if self.state == STATE_RING_OUT:
+            self.ring_out_cooldown -= 1
+            
+            # Continue applying inertia (no friction/inputs) so they fly off
+            for p in [self.p1, self.p2]:
+                p['x'] += p['vx']
+                p['y'] += p['vy']
+                
+            if self.ring_out_cooldown <= 0:
+                self.game_over = True
+                self.state = STATE_GAME_OVER
+                
+            return self.get_state()
+
         # Only apply physics during FIGHTING
         if self.state != STATE_FIGHTING:
             return self.get_state()
@@ -810,16 +827,16 @@ class SumoEngine:
         dist_p2 = math.sqrt((self.p2['x'] - self.CENTER_X)**2 + (self.p2['y'] - self.CENTER_Y)**2)
         
         if dist_p1 > self.RING_RADIUS:
-            print(f"[Engine] GAME OVER: P1 Ring Out! Dist={dist_p1:.2f} > {self.RING_RADIUS}")
-            self.game_over = True
-            self.state = STATE_GAME_OVER
+            print(f"[Engine] RING OUT: P1 out! Dist={dist_p1:.2f} > {self.RING_RADIUS}")
+            self.state = STATE_RING_OUT
+            self.ring_out_cooldown = 60 # 1 second of post-match physics
             # Use actual wrestler ID (not literal "p2") so frontend can match color correctly
             self.winner_id = self.p2.get('id', 'p2')
             self.winner_name = self.p2.get('custom_name') or self.p2.get('name', 'P2')
         elif dist_p2 > self.RING_RADIUS:
-            print(f"[Engine] GAME OVER: P2 Ring Out! Dist={dist_p2:.2f} > {self.RING_RADIUS}")
-            self.game_over = True
-            self.state = STATE_GAME_OVER
+            print(f"[Engine] RING OUT: P2 out! Dist={dist_p2:.2f} > {self.RING_RADIUS}")
+            self.state = STATE_RING_OUT
+            self.ring_out_cooldown = 60
             # Use actual wrestler ID (not literal "p1") so frontend can match color correctly
             self.winner_id = self.p1.get('id', 'p1')
             self.winner_name = self.p1.get('custom_name') or self.p1.get('name', 'P1')

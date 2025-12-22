@@ -108,12 +108,12 @@ export default function ProfilesPage() {
                         <Dialog open={open} onOpenChange={setOpen}>
                             <DialogTrigger asChild>
                                 <Button className="w-full gba-btn text-xs font-[family-name:var(--font-dotgothic)]">
-                                    <UserPlus className="mr-2 h-4 w-4" /> CREATE WRESTLER
+                                    <UserPlus className="mr-2 h-4 w-4" /> ADD NEW WRESTLER
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="gba-panel border-2 text-foreground max-w-[90vw]">
                                 <DialogHeader>
-                                    <DialogTitle className="font-[family-name:var(--font-dotgothic)] text-[var(--gold)]">NEW RIKISHI</DialogTitle>
+                                    <DialogTitle className="font-[family-name:var(--font-dotgothic)] text-[var(--gold)]">ADD NEW WRESTLER</DialogTitle>
                                     <DialogDescription className="text-muted-foreground text-sm">
                                         Enter your shikona and choose your mawashi color. You will be assigned to a heya.
                                     </DialogDescription>
@@ -189,7 +189,7 @@ export default function ProfilesPage() {
                                 <div key={match.id} className="gba-panel p-3 flex justify-between items-center bg-[#2a1f3d] border-2 border-[#3d2d5c] shadow-sm mb-2">
                                     {/* Player 1 */}
                                     <div className={`text-sm font-[family-name:var(--font-dotgothic)] w-2/5 text-right pr-3 truncate ${winnerIsP1 ? 'text-[#FFD700] drop-shadow-[1px_1px_0_rgba(0,0,0,0.8)]' : 'text-gray-400'}`}>
-                                        {match.p1_custom ? match.p1_custom.toUpperCase() : match.p1_name.toUpperCase()}
+                                        {(match.p1_custom || match.p1_name || "Unknown")?.toUpperCase()}
                                         {winnerIsP1 && <span className="ml-1 text-[10px] text-[#FFD700]">★</span>}
                                     </div>
 
@@ -201,7 +201,7 @@ export default function ProfilesPage() {
                                     {/* Player 2 */}
                                     <div className={`text-sm font-[family-name:var(--font-dotgothic)] w-2/5 pl-3 truncate ${!winnerIsP1 ? 'text-[#FFD700] drop-shadow-[1px_1px_0_rgba(0,0,0,0.8)]' : 'text-gray-400'}`}>
                                         {!winnerIsP1 && <span className="mr-1 text-[10px] text-[#FFD700]">★</span>}
-                                        {match.p2_custom ? match.p2_custom.toUpperCase() : match.p2_name.toUpperCase()}
+                                        {(match.p2_custom || match.p2_name || "Unknown")?.toUpperCase()}
                                     </div>
                                 </div>
                             );

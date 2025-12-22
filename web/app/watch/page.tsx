@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { PixelSumo } from '@/components/PixelSumo'
 import { getApiUrl } from '@/lib/api'
+import confetti from 'canvas-confetti'
 import {
     WAITING_DOTS_INTERVAL_MS,
     ACTIVE_MATCH_POLL_INTERVAL_MS,
@@ -640,6 +641,59 @@ export default function WatchPage() {
     const p1EdgeDanger = matchState?.p1_edge_danger || 0
     const p2EdgeDanger = matchState?.p2_edge_danger || 0
 
+    // --- Visual Delights: Tachiai Zoom & Sakura Rain ---
+    const containerRef = useRef<HTMLDivElement>(null)
+    const [zoomLevel, setZoomLevel] = useState(1)
+
+    // Tachiai Zoom Logic
+    useEffect(() => {
+        if (!matchState) {
+            setZoomLevel(1)
+            return
+        }
+        // Zoom in during readiness/countdown to build tension
+        if (matchState.state === STATE_COUNTDOWN || matchState.state === STATE_P1_READY || matchState.state === STATE_P2_READY) {
+            setZoomLevel(1.3)
+        } else {
+            // Snap back for the fight
+            setZoomLevel(1)
+        }
+    }, [matchState?.state])
+
+    // Victory Sakura Rain Logic
+    useEffect(() => {
+        if (showWinner && winnerData) {
+            const duration = 3000
+            const animationEnd = Date.now() + duration
+            const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min
+
+            const interval: NodeJS.Timeout = setInterval(function () {
+                const timeLeft = animationEnd - Date.now()
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval)
+                }
+
+                const particleCount = 20 * (timeLeft / duration)
+
+                // Sakura Petals (Pink/White Ovals)
+                confetti({
+                    particleCount,
+                    startVelocity: 0,
+                    ticks: 200, // Float longer
+                    origin: { x: Math.random(), y: (Math.random() * 0.2) - 0.2 }, // Fall from top
+                    colors: ['#ffb7b2', '#ffdac1', '#ffffff'],
+                    shapes: ['oval' as any],
+                    scalar: randomInRange(0.8, 1.2),
+                    drift: randomInRange(-0.5, 0.5), // Gentle swaying
+                    gravity: randomInRange(0.4, 0.6)  // Slow fall
+                })
+            }, 250)
+
+            return () => clearInterval(interval)
+        }
+    }, [showWinner, winnerData])
+
     return (
         <div style={{
             minHeight: '100vh',
@@ -651,8 +705,10 @@ export default function WatchPage() {
             fontFamily: PIXEL_FONT,
             color: '#fff',
             padding: 20,
-            position: 'relative'
+            position: 'relative',
+            overflow: 'hidden' // Clip zoom
         }}>
+            {/* Styles for animations */}
             <style>{`
                 @keyframes particle-burst { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(0); opacity: 0; } }
                 @keyframes skill-popup { 0% { transform: translateY(20px) scale(0.8); opacity: 0; } 15% { transform: translateY(0) scale(1.1); opacity: 1; } 30% { transform: scale(1); } 85% { opacity: 1; } 100% { transform: translateY(-10px); opacity: 0; } }
@@ -670,6 +726,15 @@ export default function WatchPage() {
                 @keyframes edge-pulse { 0%, 100% { box-shadow: 0 0 20px rgba(255, 0, 0, 0.3); } 50% { box-shadow: 0 0 40px rgba(255, 0, 0, 0.8); } }
                 @keyframes stamina-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
                 @keyframes countdown-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+                @keyframes camera-flash { 0% { background: rgba(255,255,255,1); } 100% { background: rgba(255,255,255,0); } }
+                @keyframes retro-slam { 
+                    0% { transform: scale(3); opacity: 0; } 
+                    50% { transform: scale(3); opacity: 0; }
+                    60% { transform: scale(0.8); opacity: 1; } 
+                    70% { transform: scale(1.1); } 
+                    80% { transform: scale(0.95); } 
+                    100% { transform: scale(1); } 
+                }
             `}</style>
 
             {/* Stamina Bars */}
@@ -792,91 +857,119 @@ export default function WatchPage() {
                     <p style={{ fontSize: 18, color: '#ffcc00', margin: 0 }}>{stateLabel}</p>
                 </div>
             )}
-
-            {/* Match Header - P1 (West) Left, P2 (East) Right */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: RING_SIZE, marginBottom: 20, alignItems: 'center' }}>
-                <div style={{ textAlign: 'left' }}>
-                    <p style={{ fontSize: 14, color: `rgb(${matchState?.p1?.color || '255,255,255'})`, textShadow: '2px 2px 0 #000', margin: 0 }}>
-                        {matchState?.p1 ? getWrestlerName(matchState.p1) : 'P1'}
-                    </p>
-                    {matchState?.p1_matta ? <p style={{ fontSize: 10, color: '#ff6666', margin: 0 }}>MATTA: {matchState.p1_matta}/2</p> : null}
-                    <p style={{ fontSize: 10, color: '#888', margin: 0 }}>WEST</p>
-                </div>
-                <span style={{ fontSize: 12, color: '#c9a227' }}>VS</span>
-                <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: 14, color: `rgb(${matchState?.p2?.color || '255,255,255'})`, textShadow: '2px 2px 0 #000', margin: 0 }}>
-                        {matchState?.p2 ? getWrestlerName(matchState.p2) : 'P2'}
-                    </p>
-                    {matchState?.p2_matta ? <p style={{ fontSize: 10, color: '#ff6666', margin: 0 }}>MATTA: {matchState.p2_matta}/2</p> : null}
-                    <p style={{ fontSize: 10, color: '#888', margin: 0 }}>EAST</p>
-                </div>
-            </div>
-
-            {/* Dohyo with edge danger glow */}
-            <div style={{
-                width: RING_SIZE,
-                height: RING_SIZE,
-                borderRadius: '50%',
-                border: '8px solid #c9a227',
-                background: 'radial-gradient(circle, #d4a574 0%, #a67c52 100%)',
-                position: 'relative',
-                boxShadow: `0 0 ${20 + Math.max(p1EdgeDanger, p2EdgeDanger) * 40}px rgba(${Math.max(p1EdgeDanger, p2EdgeDanger) > 0.7 ? '255, 50, 50' : '201, 162, 39'}, ${0.3 + Math.max(p1EdgeDanger, p2EdgeDanger) * 0.5})`,
-                transform: isShaking ? `translate(${Math.random() * 8 - 4}px, ${Math.random() * 8 - 4}px)` : 'none',
-                transition: isShaking ? 'none' : 'transform 0.1s ease-out, box-shadow 0.3s ease',
-                animation: Math.max(p1EdgeDanger, p2EdgeDanger) > 0.8 ? 'edge-pulse 0.5s infinite' : 'none'
+            {/* Match Header, Dohyo and Wrestlers - ZOOMABLE CONTENT */}
+            <div ref={containerRef} style={{
+                transition: 'transform 0.8s cubic-bezier(0.25, 1, 0.5, 1)', // Smooth zoom, snap back
+                transform: `scale(${zoomLevel})`,
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'absolute',
+                zIndex: 1 // Behind overlays
             }}>
+
+                {/* Overlays (Outside Zoom) */}
+
+                {/* Match Header - P1 (West) Left, P2 (East) Right */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', width: RING_SIZE, marginBottom: 20, alignItems: 'center' }}>
+                    <div style={{ textAlign: 'left' }}>
+                        <p style={{ fontSize: 14, color: `rgb(${matchState?.p1?.color || '255,255,255'})`, textShadow: '2px 2px 0 #000', margin: 0 }}>
+                            {matchState?.p1 ? getWrestlerName(matchState.p1) : 'P1'}
+                        </p>
+                        {matchState?.p1_matta ? <p style={{ fontSize: 10, color: '#ff6666', margin: 0 }}>MATTA: {matchState.p1_matta}/2</p> : null}
+                        <p style={{ fontSize: 10, color: '#888', margin: 0 }}>WEST</p>
+                    </div>
+                    <span style={{ fontSize: 12, color: '#c9a227' }}>VS</span>
+                    <div style={{ textAlign: 'right' }}>
+                        <p style={{ fontSize: 14, color: `rgb(${matchState?.p2?.color || '255,255,255'})`, textShadow: '2px 2px 0 #000', margin: 0 }}>
+                            {matchState?.p2 ? getWrestlerName(matchState.p2) : 'P2'}
+                        </p>
+                        {matchState?.p2_matta ? <p style={{ fontSize: 10, color: '#ff6666', margin: 0 }}>MATTA: {matchState.p2_matta}/2</p> : null}
+                        <p style={{ fontSize: 10, color: '#888', margin: 0 }}>EAST</p>
+                    </div>
+                </div>
+
+                {/* Dohyo with edge danger glow */}
                 <div style={{
-                    position: 'absolute', top: 20, left: 20, right: 20, bottom: 20,
-                    borderRadius: '50%', border: '4px solid #8b4513'
-                }} />
-
-                {particles.map((p, i) => <ImpactParticle key={p.id} x={p.x} y={p.y} delay={i * 30} />)}
-
-                {matchState?.p1 && p1Pos && (
+                    width: RING_SIZE,
+                    height: RING_SIZE,
+                    borderRadius: '50%',
+                    border: '8px solid #c9a227',
+                    background: 'radial-gradient(circle, #d4a574 0%, #a67c52 100%)',
+                    position: 'relative',
+                    boxShadow: `0 0 ${20 + Math.max(p1EdgeDanger, p2EdgeDanger) * 40}px rgba(${Math.max(p1EdgeDanger, p2EdgeDanger) > 0.7 ? '255, 50, 50' : '201, 162, 39'}, ${0.3 + Math.max(p1EdgeDanger, p2EdgeDanger) * 0.5})`,
+                    transform: isShaking ? `translate(${Math.random() * 8 - 4}px, ${Math.random() * 8 - 4}px)` : 'none',
+                    transition: isShaking ? 'none' : 'transform 0.1s ease-out, box-shadow 0.3s ease',
+                    animation: Math.max(p1EdgeDanger, p2EdgeDanger) > 0.8 ? 'edge-pulse 0.5s infinite' : 'none'
+                }}>
                     <div style={{
-                        position: 'absolute', left: `${p1Pos.x}px`, top: `${p1Pos.y}px`,
-                        transform: 'translate(-50%, -50%) scaleX(-1)', // P1 is East (Right), faces Left
-                        filter: p1EdgeDanger > 0.7 ? `drop-shadow(0 0 ${p1EdgeDanger * 10}px rgba(255, 0, 0, 0.8))` : 'none'
-                    }}>
-                        <PixelSumo seed={matchState.p1.avatar_seed || 0} color={matchState.p1.color} size={WRESTLER_SPRITE_SIZE} />
-                    </div>
-                )}
+                        position: 'absolute', top: 20, left: 20, right: 20, bottom: 20,
+                        borderRadius: '50%', border: '4px solid #8b4513'
+                    }} />
 
-                {matchState?.p2 && p2Pos && (
-                    <div style={{
-                        position: 'absolute', left: `${p2Pos.x}px`, top: `${p2Pos.y}px`,
-                        transform: 'translate(-50%, -50%)', // P2 is West (Left), faces Right
-                        filter: p2EdgeDanger > 0.7 ? `drop-shadow(0 0 ${p2EdgeDanger * 10}px rgba(255, 0, 0, 0.8))` : 'none'
-                    }}>
-                        <PixelSumo seed={matchState.p2.avatar_seed || 0} color={matchState.p2.color} size={WRESTLER_SPRITE_SIZE} />
-                    </div>
-                )}
-            </div>
+                    {particles.map((p, i) => <ImpactParticle key={p.id} x={p.x} y={p.y} delay={i * 30} />)}
+
+                    {matchState?.p1 && p1Pos && (
+                        <div style={{
+                            position: 'absolute', left: `${p1Pos.x}px`, top: `${p1Pos.y}px`,
+                            transform: 'translate(-50%, -50%) scaleX(-1)', // P1 is East (Right), faces Left
+                            filter: p1EdgeDanger > 0.7 ? `drop-shadow(0 0 ${p1EdgeDanger * 10}px rgba(255, 0, 0, 0.8))` : 'none'
+                        }}>
+                            <PixelSumo seed={matchState.p1.avatar_seed || 0} color={matchState.p1.color} size={WRESTLER_SPRITE_SIZE} />
+                        </div>
+                    )}
+
+                    {matchState?.p2 && p2Pos && (
+                        <div style={{
+                            position: 'absolute', left: `${p2Pos.x}px`, top: `${p2Pos.y}px`,
+                            transform: 'translate(-50%, -50%)', // P2 is West (Left), faces Right
+                            filter: p2EdgeDanger > 0.7 ? `drop-shadow(0 0 ${p2EdgeDanger * 10}px rgba(255, 0, 0, 0.8))` : 'none'
+                        }}>
+                            <PixelSumo seed={matchState.p2.avatar_seed || 0} color={matchState.p2.color} size={WRESTLER_SPRITE_SIZE} />
+                        </div>
+                    )}
+                </div> {/* End of Dohyo */}
+            </div> {/* End of Zoom Wrapper */}
 
             {/* RING OUT! Overlay - Dramatic moment of victory */}
+            {/* RING OUT! Overlay - Retro Arcade Style */}
             {showRingOut && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(100, 0, 0, 0.4)', // Red tint for drama
-                    border: '8px solid #ff3333',
-                    boxShadow: 'inset 0 0 100px rgba(255, 0, 0, 0.5)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    zIndex: 96,
-                    animation: 'ringout-pulse 0.5s ease-in-out infinite alternate'
-                }}>
-                    <div style={{ textAlign: 'center' }}>
-                        <p style={{
-                            fontSize: 72,
-                            color: '#ff3333',
-                            textShadow: '4px 4px 0 #000, -2px -2px 0 #000',
-                            fontFamily: PIXEL_FONT,
-                            margin: 0,
-                            animation: 'tachiai-burst 0.5s ease-out forwards'
-                        }}>
-                            RING OUT!
-                        </p>
+                <>
+                    {/* Camera Flash Effect */}
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        zIndex: 97, pointerEvents: 'none',
+                        animation: 'camera-flash 0.5s ease-out forwards'
+                    }} />
+
+                    {/* Text Overlay */}
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0, 0, 0, 0)', // Clear bg, focus on text
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        zIndex: 96
+                    }}>
+                        <div style={{ textAlign: 'center' }}>
+                            <p style={{
+                                fontSize: 80,
+                                background: 'linear-gradient(to bottom, #fff 0%, #ffd700 50%, #b8860b 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                filter: 'drop-shadow(4px 4px 0px #000)',
+                                fontFamily: PIXEL_FONT,
+                                margin: 0,
+                                textTransform: 'uppercase',
+                                letterSpacing: '4px',
+                                animation: 'retro-slam 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards'
+                            }}>
+                                RING OUT!
+                            </p>
+                        </div>
                     </div>
-                </div>
+                </>
             )}
 
             {/* Decision Overlay - SHOBU-ARI */}

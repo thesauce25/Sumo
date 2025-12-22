@@ -57,6 +57,12 @@ export default function ControllerPage() {
         return () => clearInterval(interval);
     }, [buttonText, fetchWrestlers, loading]);
 
+    const triggerHaptic = (ms: number) => {
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate(ms);
+        }
+    };
+
     const handleFight = async () => {
         if (!p1 || !p2) return;
         // Validate: can't fight yourself
@@ -64,6 +70,7 @@ export default function ControllerPage() {
             alert("Cannot select the same wrestler for both sides!");
             return;
         }
+        triggerHaptic(200); // Heavy thud for TACHIAI
         setLoading(true);
         setButtonText(BUTTON_TEXT.HAKKEYOI);
         await api.startFight(p1, p2);
@@ -72,6 +79,11 @@ export default function ControllerPage() {
     const getWrestler = (idStr: string) => wrestlers.find(w => w.id.toString() === idStr);
     const w1 = getWrestler(p1);
     const w2 = getWrestler(p2);
+
+    const handlePush = (wId: string, dir: 'push_left' | 'push_right') => {
+        triggerHaptic(50); // Sharp tap for interactions
+        api.fightAction(wId, dir);
+    };
 
     return (
         <div className="h-[100dvh] p-3 flex flex-col max-w-md mx-auto bg-[#1a1428] overflow-hidden">
@@ -89,7 +101,10 @@ export default function ControllerPage() {
 
                 {/* Solo Mode Toggle */}
                 <button
-                    onClick={() => setSoloMode(!soloMode)}
+                    onClick={() => {
+                        triggerHaptic(20);
+                        setSoloMode(!soloMode);
+                    }}
                     className={`flex items-center gap-1.5 px-2 py-1 rounded border-2 text-[10px] font-[family-name:var(--font-dotgothic)] transition-all ${soloMode
                         ? 'bg-[#50C878] text-white border-[#90EE90] shadow-[0_0_10px_rgba(80,200,120,0.5)]'
                         : 'bg-[#2a1f3d] text-gray-400 border-[#3d2d5c] hover:border-[#FFD700]'
@@ -103,6 +118,7 @@ export default function ControllerPage() {
                 <button
                     onClick={async () => {
                         if (window.confirm('Reset current match? This will clear any stuck state.')) {
+                            triggerHaptic(20);
                             try {
                                 await api.resetMatch();
                                 setLoading(false);
@@ -145,7 +161,7 @@ export default function ControllerPage() {
                                 <div className="absolute inset-0 z-10 flex gap-2 p-1">
                                     {/* LEFT PUSH BUTTON */}
                                     <button
-                                        onClick={() => api.fightAction(w1.id, 'push_left')}
+                                        onClick={() => handlePush(w1.id, 'push_left')}
                                         style={{ backgroundColor: `rgb(${w1.color})` }}
                                         className="flex-1 text-white font-[family-name:var(--font-dotgothic)] text-xl border-4 border-l-yellow-300 border-t-yellow-300 border-r-yellow-600 border-b-yellow-600 flex flex-col items-center justify-center shadow-lg active:brightness-75 active:scale-95 transition-all"
                                     >
@@ -154,7 +170,7 @@ export default function ControllerPage() {
                                     </button>
                                     {/* RIGHT PUSH BUTTON */}
                                     <button
-                                        onClick={() => api.fightAction(w1.id, 'push_right')}
+                                        onClick={() => handlePush(w1.id, 'push_right')}
                                         style={{ backgroundColor: `rgb(${w1.color})` }}
                                         className="flex-1 text-white font-[family-name:var(--font-dotgothic)] text-xl border-4 border-l-yellow-300 border-t-yellow-300 border-r-yellow-600 border-b-yellow-600 flex flex-col items-center justify-center shadow-lg active:brightness-75 active:scale-95 transition-all"
                                     >
@@ -213,7 +229,7 @@ export default function ControllerPage() {
                                 <div className="absolute inset-0 z-10 flex gap-2 p-1">
                                     {/* LEFT PUSH BUTTON */}
                                     <button
-                                        onClick={() => api.fightAction(w2.id, 'push_left')}
+                                        onClick={() => handlePush(w2.id, 'push_left')}
                                         style={{ backgroundColor: `rgb(${w2.color})` }}
                                         className="flex-1 text-white font-[family-name:var(--font-dotgothic)] text-xl border-4 border-l-yellow-300 border-t-yellow-300 border-r-yellow-600 border-b-yellow-600 flex flex-col items-center justify-center shadow-lg active:brightness-75 active:scale-95 transition-all"
                                     >
@@ -222,7 +238,7 @@ export default function ControllerPage() {
                                     </button>
                                     {/* RIGHT PUSH BUTTON */}
                                     <button
-                                        onClick={() => api.fightAction(w2.id, 'push_right')}
+                                        onClick={() => handlePush(w2.id, 'push_right')}
                                         style={{ backgroundColor: `rgb(${w2.color})` }}
                                         className="flex-1 text-white font-[family-name:var(--font-dotgothic)] text-xl border-4 border-l-yellow-300 border-t-yellow-300 border-r-yellow-600 border-b-yellow-600 flex flex-col items-center justify-center shadow-lg active:brightness-75 active:scale-95 transition-all"
                                     >
