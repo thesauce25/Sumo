@@ -22,6 +22,9 @@ export default function ControllerPage() {
     const [mySide, setMySide] = useState<'p1' | 'p2' | null>(null);
     const [lobbyStatus, setLobbyStatus] = useState<any>(null);
 
+    // UI State for improved selection
+    const [selectorOpen, setSelectorOpen] = useState<'p1' | 'p2' | null>(null);
+
     const fetchWrestlers = useCallback(() => {
         api.getWrestlers().then(data => {
             setWrestlers(data);
@@ -280,26 +283,25 @@ export default function ControllerPage() {
                 </div>
 
                 {/* FIGHTER SELECTION (Only show if not fighting) */}
+                {/* FIGHTER SELECTION (Only show if not fighting) */}
                 {!isFighting && (
                     <div className="flex-1 flex flex-col items-center justify-center gap-4">
                         <h3 className="text-[var(--gold)] font-[family-name:var(--font-dotgothic)]">SELECT YOUR FIGHTER</h3>
-                        <select
-                            value={mySide === 'p1' ? p1 : p2}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                if (mySide === 'p1') setP1(val); else setP2(val);
-                                // Join Lobby
-                                const w = wrestlers.find(w => w.id.toString() === val);
-                                if (w) api.joinLobby(mySide, val, w.name);
-                            }}
-                            className="bg-[#2a1f3d] text-white p-3 rounded border border-[var(--gold)] w-full max-w-xs font-[family-name:var(--font-dotgothic)] text-lg"
+
+                        {/* Visual Selector Trigger */}
+                        <button
+                            onClick={() => setSelectorOpen(mySide)} // Open selector for my side
+                            className="bg-[#2a1f3d] text-white p-4 rounded-xl border-2 border-[var(--gold)] w-full max-w-xs flex items-center justify-between group hover:bg-[#3d2d5c] transition-colors"
                         >
-                            {wrestlers.map(w => <option key={w.id} value={w.id}>{(w.custom_name || w.name).toUpperCase()}</option>)}
-                        </select>
+                            <span className="font-[family-name:var(--font-dotgothic)] text-xl">
+                                {(mySide === 'p1' ? w1 : w2)?.custom_name?.toUpperCase() || (mySide === 'p1' ? w1 : w2)?.name.toUpperCase() || "CHOOSE FIGHTER..."}
+                            </span>
+                            <span className="text-[var(--gold)]">▼</span>
+                        </button>
 
                         <div className="py-4">
-                            {mySide === 'p1' && w1 && <PixelSumo seed={w1.avatar_seed} color={w1.color} size={100} />}
-                            {mySide === 'p2' && w2 && <PixelSumo seed={w2.avatar_seed} color={w2.color} size={100} />}
+                            {mySide === 'p1' && w1 && <PixelSumo seed={w1.avatar_seed} color={w1.color} size={120} />}
+                            {mySide === 'p2' && w2 && <PixelSumo seed={w2.avatar_seed} color={w2.color} size={120} />}
                         </div>
 
                         {/* START BUTTON (If both ready) */}
@@ -434,17 +436,15 @@ export default function ControllerPage() {
                 {/* P1 - WEST Fighter (Top) */}
                 <div className="gba-menu-btn p-3 relative">
                     <p className="text-[10px] text-[#87CEEB] font-[family-name:var(--font-dotgothic)] mb-1">WEST</p>
-                    <select
-                        value={p1}
-                        onChange={(e) => setP1(e.target.value)}
-                        className="w-full bg-[#2a1f3d] text-white p-2 text-sm font-[family-name:var(--font-dotgothic)] border-2 border-[#3d2d5c] focus:border-[#50C878] outline-none"
+                    <div
+                        onClick={() => setSelectorOpen('p1')}
+                        className="bg-[#2a1f3d] p-2 border-2 border-[#3d2d5c] flex justify-between items-center cursor-pointer hover:border-[#50C878] transition-colors"
                     >
-                        {wrestlers.map(w => (
-                            <option key={w.id} value={w.id}>
-                                {(w.custom_name || w.name).toUpperCase()} ({w.wins}-{w.matches - w.wins})
-                            </option>
-                        ))}
-                    </select>
+                        <span className="text-sm text-white font-[family-name:var(--font-dotgothic)] truncate flex-1">
+                            {w1?.custom_name?.toUpperCase() || w1?.name.toUpperCase() || "SELECT FIGHTER..."}
+                        </span>
+                        <span className="text-gray-400 text-xs">▼</span>
+                    </div>
                     {w1 && (
                         <div className="mt-2 flex gap-3 items-center relative">
                             {/* SINGLE PUSH BUTTON - Shows during fight (NOKOTTA state) */}
@@ -490,17 +490,15 @@ export default function ControllerPage() {
                 {/* P2 - EAST Fighter (Bottom) */}
                 <div className="gba-menu-btn p-3 relative">
                     <p className="text-[10px] text-[#87CEEB] font-[family-name:var(--font-dotgothic)] mb-1">EAST</p>
-                    <select
-                        value={p2}
-                        onChange={(e) => setP2(e.target.value)}
-                        className="w-full bg-[#2a1f3d] text-white p-2 text-sm font-[family-name:var(--font-dotgothic)] border-2 border-[#3d2d5c] focus:border-[#FFD700] outline-none"
+                    <div
+                        onClick={() => setSelectorOpen('p2')}
+                        className="bg-[#2a1f3d] p-2 border-2 border-[#3d2d5c] flex justify-between items-center cursor-pointer hover:border-[#FFD700] transition-colors"
                     >
-                        {wrestlers.map(w => (
-                            <option key={w.id} value={w.id}>
-                                {(w.custom_name || w.name).toUpperCase()} ({w.wins}-{w.matches - w.wins})
-                            </option>
-                        ))}
-                    </select>
+                        <span className="text-gray-400 text-xs">▼</span>
+                        <span className="text-sm text-white font-[family-name:var(--font-dotgothic)] truncate flex-1 text-right">
+                            {w2?.custom_name?.toUpperCase() || w2?.name.toUpperCase() || "SELECT FIGHTER..."}
+                        </span>
+                    </div>
                     {w2 && (
                         <div className="mt-2 flex gap-3 items-center relative">
                             {/* SINGLE PUSH BUTTON - Shows during fight (NOKOTTA state) */}
@@ -548,6 +546,25 @@ export default function ControllerPage() {
 
             {/* GBA Bottom Border */}
             <div className="h-1.5 bg-gradient-to-r from-[#8B4513] via-[#CD853F] to-[#8B4513] -mx-3 -mb-3 mt-2" />
+
+            {/* SELECTOR MODAL */}
+            <WrestlerSelector
+                isOpen={!!selectorOpen}
+                onClose={() => setSelectorOpen(null)}
+                wrestlers={wrestlers}
+                onSelect={(w) => {
+                    if (selectorOpen === 'p1') {
+                        setP1(w.id.toString());
+                        // If in sync mode, auto-join
+                        if (syncMode && mySide === 'p1') api.joinLobby('p1', w.id.toString(), w.name);
+                    } else if (selectorOpen === 'p2') {
+                        setP2(w.id.toString());
+                        // If in sync mode, auto-join
+                        if (syncMode && mySide === 'p2') api.joinLobby('p2', w.id.toString(), w.name);
+                    }
+                    setSelectorOpen(null);
+                }}
+            />
         </div>
     );
 }
@@ -561,4 +578,50 @@ function StatBar({ label, value, color }: { label: string, value: number, color:
             </div>
         </div>
     )
+}
+
+function WrestlerSelector({
+    isOpen,
+    onClose,
+    onSelect,
+    wrestlers
+}: {
+    isOpen: boolean,
+    onClose: () => void,
+    onSelect: (w: Wrestler) => void,
+    wrestlers: Wrestler[]
+}) {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex flex-col p-4 animate-in fade-in duration-200">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-[var(--gold)] font-[family-name:var(--font-dotgothic)] text-xl">ROSTER</h2>
+                <Button variant="ghost" className="text-white hover:text-red-400 text-xl h-10 w-10" onClick={onClose}>✕</Button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto grid grid-cols-2 gap-3 pb-20">
+                {wrestlers.map(w => (
+                    <button
+                        key={w.id}
+                        onClick={() => onSelect(w)}
+                        className="bg-[#1a1428] border border-gray-700 hover:border-[var(--gold)] rounded-xl p-3 flex flex-col items-center gap-2 active:scale-95 transition-all text-left group"
+                    >
+                        <div className="bg-[#2a1f3d] rounded-full p-2 group-hover:bg-[#3d2d5c] transition-colors">
+                            <PixelSumo seed={w.avatar_seed} color={w.color} size={64} />
+                        </div>
+                        <div className="w-full">
+                            <div className="font-[family-name:var(--font-dotgothic)] text-white text-sm truncate w-full text-center">
+                                {(w.custom_name || w.name).toUpperCase()}
+                            </div>
+                            <div className="flex justify-between text-[10px] text-gray-400 mt-1 px-1">
+                                <span>{w.rank_name}</span>
+                                <span>{w.wins}W - {w.matches - w.wins}L</span>
+                            </div>
+                        </div>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
 }

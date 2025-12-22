@@ -853,23 +853,50 @@ class SumoEngine:
             self.p1['y'] += ny * pull_force
             self.p2['x'] -= nx * pull_force
             self.p2['y'] -= ny * pull_force
+        # Precise Ring Out Logic
+        # Calculate distance from center
         dist_p1 = math.sqrt((self.p1['x'] - self.CENTER_X)**2 + (self.p1['y'] - self.CENTER_Y)**2)
         dist_p2 = math.sqrt((self.p2['x'] - self.CENTER_X)**2 + (self.p2['y'] - self.CENTER_Y)**2)
         
-        if dist_p1 > self.RING_RADIUS:
-            print(f"[Engine] RING OUT: P1 out! Dist={dist_p1:.2f} > {self.RING_RADIUS}")
-            self.state = STATE_RING_OUT
-            self.ring_out_cooldown = 60 # 1 second of post-match physics
-            # Use actual wrestler ID (not literal "p2") so frontend can match color correctly
-            self.winner_id = self.p2.get('id', 'p2')
-            self.winner_name = self.p2.get('custom_name') or self.p2.get('name', 'P2')
-        elif dist_p2 > self.RING_RADIUS:
-            print(f"[Engine] RING OUT: P2 out! Dist={dist_p2:.2f} > {self.RING_RADIUS}")
+        # Define strict boundary (Center of wrestler + small buffer)
+        # Visually, if half the wrestler is out, they should be out. 
+        # R=14. Wrestler Radius=2.0.
+        # If Dist > 13.5 allows for a "Toe on the straw" feel. 
+        # If Dist > 14.0 means center crossed.
+        BOUNDARY = self.RING_RADIUS
+        
+        p1_out = dist_p1 > BOUNDARY
+        p2_out = dist_p2 > BOUNDARY
+        
+        if p1_out or p2_out:
+            print(f"[Engine] RING OUT DETECTED: P1={dist_p1:.2f}, P2={dist_p2:.2f}")
             self.state = STATE_RING_OUT
             self.ring_out_cooldown = 60
-            # Use actual wrestler ID (not literal "p1") so frontend can match color correctly
-            self.winner_id = self.p1.get('id', 'p1')
-            self.winner_name = self.p1.get('custom_name') or self.p1.get('name', 'P1')
+            
+            # Determine winner
+            if p1_out and p2_out:
+                # SIMULTANEOUS / FLYING OUT
+                # The wrestler who is FURTHER out likely crossed first or with more momentum
+                # In Sumo, "Dead Body" rule says if P1 flies out (airborne) and P2 steps out (grounded), P2 loses.
+                # Since we don't track Z-axis, we use distance as proxy for "severity" of exit.
+                # However, usually the person being PUSHED moves faster and ends up further out.
+                # If P1 pushes P2, P2 flies far out (dist large). P1 might step out slightly (dist small).
+                # P2 touched down outside first (hypothetically).
+                # So the one with LARGER distance loses.
+                if dist_p1 > dist_p2:
+                    self.winner_id = self.p2.get('id', 'p2')
+                    self.winner_name = self.p2.get('custom_name') or self.p2.get('name', 'P2')
+                else:
+                    self.winner_id = self.p1.get('id', 'p1')
+                    self.winner_name = self.p1.get('custom_name') or self.p1.get('name', 'P1')
+            elif p1_out:
+                # Only P1 out
+                self.winner_id = self.p2.get('id', 'p2')
+                self.winner_name = self.p2.get('custom_name') or self.p2.get('name', 'P2')
+            elif p2_out:
+                # Only P2 out
+                self.winner_id = self.p1.get('id', 'p1')
+                self.winner_name = self.p1.get('custom_name') or self.p1.get('name', 'P1')
 
         return self.get_state()
 

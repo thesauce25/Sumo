@@ -535,7 +535,8 @@ async def get_skills():
             "color": "220,50,50",
             "skills": [
                 {"id": "str_1", "name": "Iron Grip", "jp": "鉄握", "desc": "+10% push force", "tier": 1, "cost": 1, "effect": {"strength": 0.1}},
-                {"id": "str_2", "name": "Mountain Push", "jp": "山押し", "desc": "+15% push force", "tier": 2, "cost": 2, "effect": {"strength": 0.15}}
+                {"id": "str_2", "name": "Mountain Push", "jp": "山押し", "desc": "+15% push force", "tier": 2, "cost": 2, "effect": {"strength": 0.15}},
+                {"id": "str_3", "name": "Yokozuna Force", "jp": "横綱力", "desc": "+20% push force", "tier": 3, "cost": 3, "effect": {"strength": 0.2}}
             ]
         },
         "technique": {
@@ -545,7 +546,8 @@ async def get_skills():
             "color": "50,150,220",
             "skills": [
                 {"id": "tech_1", "name": "Quick Hands", "jp": "速手", "desc": "+10% grab speed", "tier": 1, "cost": 1, "effect": {"technique": 0.1}},
-                {"id": "tech_2", "name": "Belt Master", "jp": "帯師", "desc": "+15% grab success", "tier": 2, "cost": 2, "effect": {"technique": 0.15}}
+                {"id": "tech_2", "name": "Belt Master", "jp": "帯師", "desc": "+15% grab success", "tier": 2, "cost": 2, "effect": {"technique": 0.15}},
+                {"id": "tech_3", "name": "Kimarite Master", "jp": "決まり手", "desc": "+20% success", "tier": 3, "cost": 3, "effect": {"technique": 0.2}}
             ]
         },
         "speed": {
@@ -555,7 +557,8 @@ async def get_skills():
             "color": "50,220,100",
             "skills": [
                 {"id": "spd_1", "name": "Quick Step", "jp": "速歩", "desc": "+10% movement", "tier": 1, "cost": 1, "effect": {"speed": 0.1}},
-                {"id": "spd_2", "name": "Lightning Dash", "jp": "雷走", "desc": "+15% movement", "tier": 2, "cost": 2, "effect": {"speed": 0.15}}
+                {"id": "spd_2", "name": "Lightning Dash", "jp": "雷走", "desc": "+15% movement", "tier": 2, "cost": 2, "effect": {"speed": 0.15}},
+                {"id": "spd_3", "name": "God Speed", "jp": "神速", "desc": "+20% movement", "tier": 3, "cost": 3, "effect": {"speed": 0.2}}
             ]
         }
     }
@@ -601,21 +604,24 @@ def get_skill_tree_sync():
             "name": "Strength", "jp": "力", "description": "Raw pushing power", "color": "220,50,50",
             "skills": [
                 {"id": "str_1", "name": "Iron Grip", "jp": "鉄握", "desc": "+10% push force", "tier": 1, "cost": 1, "effect": {"strength": 0.1}},
-                {"id": "str_2", "name": "Mountain Push", "jp": "山押し", "desc": "+15% push force", "tier": 2, "cost": 2, "effect": {"strength": 0.15}}
+                {"id": "str_2", "name": "Mountain Push", "jp": "山押し", "desc": "+15% push force", "tier": 2, "cost": 2, "effect": {"strength": 0.15}},
+                {"id": "str_3", "name": "Yokozuna Force", "jp": "横綱力", "desc": "+20% push force", "tier": 3, "cost": 3, "effect": {"strength": 0.2}}
             ]
         },
         "technique": {
             "name": "Technique", "jp": "技", "description": "Grappling skill", "color": "50,150,220",
             "skills": [
                 {"id": "tech_1", "name": "Quick Hands", "jp": "速手", "desc": "+10% grab speed", "tier": 1, "cost": 1, "effect": {"technique": 0.1}},
-                {"id": "tech_2", "name": "Belt Master", "jp": "帯師", "desc": "+15% grab success", "tier": 2, "cost": 2, "effect": {"technique": 0.15}}
+                {"id": "tech_2", "name": "Belt Master", "jp": "帯師", "desc": "+15% grab success", "tier": 2, "cost": 2, "effect": {"technique": 0.15}},
+                {"id": "tech_3", "name": "Kimarite Master", "jp": "決まり手", "desc": "+20% success", "tier": 3, "cost": 3, "effect": {"technique": 0.2}}
             ]
         },
         "speed": {
             "name": "Speed", "jp": "速", "description": "Movement and reaction", "color": "50,220,100",
             "skills": [
                 {"id": "spd_1", "name": "Quick Step", "jp": "速歩", "desc": "+10% movement", "tier": 1, "cost": 1, "effect": {"speed": 0.1}},
-                {"id": "spd_2", "name": "Lightning Dash", "jp": "雷走", "desc": "+15% movement", "tier": 2, "cost": 2, "effect": {"speed": 0.15}}
+                {"id": "spd_2", "name": "Lightning Dash", "jp": "雷走", "desc": "+15% movement", "tier": 2, "cost": 2, "effect": {"speed": 0.15}},
+                {"id": "spd_3", "name": "God Speed", "jp": "神速", "desc": "+20% movement", "tier": 3, "cost": 3, "effect": {"speed": 0.2}}
             ]
         }
     }
@@ -728,6 +734,9 @@ async def start_simulation():
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
         
+    return {
+        "status": "success",
+        "match_id": match_id,
         "watch_url": f"/watch"
     }
 
