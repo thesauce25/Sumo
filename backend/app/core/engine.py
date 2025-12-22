@@ -235,11 +235,13 @@ class SumoEngine:
         self.p1['technique'] = float(p1_data.get('technique', 1.0))
         self.p1['speed'] = float(p1_data.get('speed', 1.0))
         self.p1['mass'] = float(p1_data.get('weight', 150)) / 150.0
+        self.p1['unlocked_skills'] = p1_data.get('unlocked_skills', [])
         
         self.p2['strength'] = float(p2_data.get('strength', 1.0))
         self.p2['technique'] = float(p2_data.get('technique', 1.0))
         self.p2['speed'] = float(p2_data.get('speed', 1.0))
         self.p2['mass'] = float(p2_data.get('weight', 150)) / 150.0
+        self.p2['unlocked_skills'] = p2_data.get('unlocked_skills', [])
 
     def _log_event(self, event_type: str, data: Dict[str, Any] = None):
         """Log a match event for replay/debugging"""
@@ -469,11 +471,63 @@ class SumoEngine:
         - Counter-hit: Opposing directions = +50% force (amplified by technique)
         - Clash: Same directions = double stamina cost
         - Predictability: 3+ same inputs = -20% force
+        - Skill Procs: Chance to trigger special effects based on unlocked skills
         """
         # --- Stamina Check ---
         current_stamina = pushing_wrestler.get('stamina', 100.0)
         fatigue_mult = 1.0
         stamina_cost = self.STAMINA_COST_PUSH
+        
+        # --- Skill Proc Check (Pre-calculation) ---
+        proc_bonus_force = 1.0
+        proc_stamina_damage = 0.0
+        proc_event = None
+        
+        # Check for skills
+        unlocked = pushing_wrestler.get('unlocked_skills', [])
+        # Iterate and roll for procs
+        # Logic: 15% base chance per relevant skill
+        for skill_entry in unlocked:
+            # Handle both list of strings and list of dicts
+            skill_id = skill_entry.get('skill_id') if isinstance(skill_entry, dict) else skill_entry
+            
+            # Simple RNG for proc
+            if random.random() < 0.15: 
+                if "str" in skill_id:
+                    # STRENGTH SKILL: CRIT PUSH
+                    # Tier 1: 1.5x, Tier 2: 2.0x
+                    multiplier = 2.0 if "2" in skill_id else 1.5
+                    if multiplier > proc_bonus_force: # Keep best
+                        proc_bonus_force = multiplier
+                        proc_event = {"name": "POWER PUSH", "type": "crit"}
+                        
+                elif "tech" in skill_id:
+                    # TECHNIQUE SKILL: STAMINA DRAIN
+                    # Tier 1: 10 dmg, Tier 2: 20 dmg
+                    dmg = 20.0 if "2" in skill_id else 10.0
+                    proc_stamina_damage += dmg
+                    if not proc_event: 
+                        proc_event = {"name": "DRAIN", "type": "debuff"}
+                        
+                elif "spd" in skill_id:
+                     # SPEED SKILL: DOUBLE HIT (Force multiplier)
+                     # Conceptually a double hit, effectively just more force but labeled differently
+                     multiplier = 1.8 if "2" in skill_id else 1.4
+                     if multiplier > proc_bonus_force:
+                         proc_bonus_force = multiplier
+                         proc_event = {"name": "DOUBLE STRIKE", "type": "speed"}
+
+        # Emit Proc Event if happened
+        if proc_event:
+            pusher_name = pushing_wrestler.get('custom_name') or pushing_wrestler.get('name', 'Pusher')
+            self.pending_events.append({
+                "type": "skill_proc",
+                "wrestler_id": pushing_wrestler['id'],
+                "wrestler_name": pusher_name,
+                "proc_name": proc_event["name"],
+                "proc_type": proc_event["type"],
+                "timestamp": self.timestamp
+            })
         
         # --- Counter Detection ---
         counter_mult = 1.0
@@ -532,8 +586,13 @@ class SumoEngine:
         edge_resistance = self._get_edge_resistance(opponent_wrestler)
         base_force = self.PUSH_FORCE_PER_INPUT * pushing_wrestler.get('strength', 1.0)
         
-        # FINAL FORCE: Base * Fatigue * Counter * Predictability / EdgeResistance
-        effective_force = (base_force * fatigue_mult * counter_mult * predictability_mult) / edge_resistance
+        # FINAL FORCE: Base * Fatigue * Counter * Predictability * SkillProc / EdgeResistance
+        effective_force = (base_force * fatigue_mult * counter_mult * predictability_mult * proc_bonus_force) / edge_resistance
+        
+        # Apply Skill Stamina Damage to Opponent
+        if proc_stamina_damage > 0:
+            opp_stamina = opponent_wrestler.get('stamina', 100.0)
+            opponent_wrestler['stamina'] = max(0, opp_stamina - proc_stamina_damage)
         
         # CHAOS VARIANCE (reduced on counter for more consistent counter hits)
         if is_counter:
