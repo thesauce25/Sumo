@@ -62,6 +62,9 @@ class SumoEngine:
     MATTA_RESET_TIME = 1.5        # Seconds to show matta before reset
     MAX_MATTA_PER_PLAYER = 2      # Auto-loss after this many false starts
     
+    # Input Throttling
+    INPUT_COOLDOWN = 0.08         # 80ms min interval between processed moves
+    
     # Skill trigger settings
     SKILL_COOLDOWN = 1.0
     SKILL_TRIGGER_CHANCE = 0.25
@@ -303,6 +306,12 @@ class SumoEngine:
         normalized_p1_id = self._normalize_id(self.p1.get('id'))
         normalized_p2_id = self._normalize_id(self.p2.get('id'))
         
+        normalized_p2_id = self._normalize_id(self.p2.get('id'))
+        
+        # During COUNTDOWN - Ignore all inputs (prevents buffering/lag)
+        if self.state == STATE_COUNTDOWN:
+            return
+
         # During WAITING state - track press times for tachiai
         if self.state == STATE_WAITING:
             if player_id == "p1" and action in ("PUSH", "KIAI"):
@@ -396,6 +405,13 @@ class SumoEngine:
             valid_actions = ("PUSH", "KIAI", "PUSH_LEFT", "PUSH_RIGHT")
             
             if pushing_wrestler and opponent_wrestler and action in valid_actions:
+                # --- Rate Limit Check ---
+                last_push = pushing_wrestler.get('last_push_time', 0.0)
+                if (self.timestamp - last_push) < self.INPUT_COOLDOWN:
+                    # Input ignored (cooldown)
+                    return
+                
+                # Extract direction from action (LEFT, RIGHT, or random for PUSH/KIAI)
                 # Extract direction from action (LEFT, RIGHT, or random for PUSH/KIAI)
                 if action == "PUSH_LEFT":
                     direction = "LEFT"
@@ -756,8 +772,15 @@ class SumoEngine:
         # 1. Apply Physics
         for p in [self.p1, self.p2]:
             # Physics
+            # Physics using drag
             p['vx'] *= self.FRICTION
             p['vy'] *= self.FRICTION
+            
+            # Velocity Cap (Prevent tunneling)
+            MAX_SPEED = 1.5
+            p['vx'] = max(-MAX_SPEED, min(MAX_SPEED, p['vx']))
+            p['vy'] = max(-MAX_SPEED, min(MAX_SPEED, p['vy']))
+            
             p['x'] += p['vx']
             p['y'] += p['vy']
             
@@ -790,6 +813,13 @@ class SumoEngine:
             # No passive grinding force - matches decided purely by button presses
             # This ensures fair gameplay regardless of wrestler stats during idle collision
             # Stats only matter when players actively PUSH
+            
+            # Stop velocity perpendicular to collision normal (prevent sliding through)
+            # Simple bounce/stop
+            # self.p1['vx'] *= 0.5
+            # self.p1['vy'] *= 0.5
+            # self.p2['vx'] *= 0.5
+            # self.p2['vy'] *= 0.5
             
             # Visual jitter only
             jitter = random.uniform(-0.1, 0.1)

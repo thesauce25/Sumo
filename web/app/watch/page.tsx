@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
+import Link from 'next/link'
+import { Gamepad2 } from 'lucide-react'
 import { PixelSumo } from '@/components/PixelSumo'
 import { getApiUrl } from '@/lib/api'
 import confetti from 'canvas-confetti'
@@ -165,6 +167,10 @@ export default function WatchPage() {
     const wsRef = useRef<WebSocket | null>(null)
     const pollRef = useRef<NodeJS.Timeout | null>(null)
     const shakeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+    // Visual Delights: Tachiai Zoom & Sakura Rain
+    const containerRef = useRef<HTMLDivElement>(null)
+    const [zoomLevel, setZoomLevel] = useState(1)
 
     const API_BASE = getApiUrl()
 
@@ -440,8 +446,8 @@ export default function WatchPage() {
         let animationFrameId: number
 
         const animate = () => {
-            // Slower lerp for dramatic "falling out" effect
-            const FALL_LERP = 0.05
+            // Faster lerp for decisive "falling out" effect
+            const FALL_LERP = 0.12
 
             setDisplayP1(prev => {
                 if (!prev) return prev
@@ -463,6 +469,55 @@ export default function WatchPage() {
         animate()
         return () => cancelAnimationFrame(animationFrameId)
     }, [showRingOut]) // Run only when entering/exiting ring out phase
+
+    // Tachiai Zoom Logic
+    useEffect(() => {
+        if (!matchState) {
+            setZoomLevel(1)
+            return
+        }
+        // Zoom in during readiness/countdown to build tension
+        if (matchState.state === STATE_COUNTDOWN || matchState.state === STATE_P1_READY || matchState.state === STATE_P2_READY) {
+            setZoomLevel(1.3)
+        } else {
+            // Snap back for the fight
+            setZoomLevel(1)
+        }
+    }, [matchState?.state])
+
+    // Victory Sakura Rain Logic
+    useEffect(() => {
+        if (showWinner && winnerData) {
+            const duration = 3000
+            const animationEnd = Date.now() + duration
+            const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min
+
+            const interval: NodeJS.Timeout = setInterval(function () {
+                const timeLeft = animationEnd - Date.now()
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval)
+                }
+
+                const particleCount = 20 * (timeLeft / duration)
+
+                // Sakura Petals (Pink/White Ovals)
+                confetti({
+                    particleCount,
+                    startVelocity: 0,
+                    ticks: 200, // Float longer
+                    origin: { x: Math.random(), y: (Math.random() * 0.2) - 0.2 }, // Fall from top
+                    colors: ['#ffb7b2', '#ffdac1', '#ffffff'],
+                    shapes: ['oval' as any],
+                    scalar: randomInRange(0.8, 1.2),
+                    drift: randomInRange(-0.5, 0.5), // Gentle swaying
+                    gravity: randomInRange(0.4, 0.6)  // Slow fall
+                })
+            }, 250)
+
+            return () => clearInterval(interval)
+        }
+    }, [showWinner, winnerData])
 
     const engineToRing = (engineX: number, engineY: number) => ({
         x: (engineX / ENGINE_WIDTH) * RING_SIZE,
@@ -641,59 +696,6 @@ export default function WatchPage() {
     const p1EdgeDanger = matchState?.p1_edge_danger || 0
     const p2EdgeDanger = matchState?.p2_edge_danger || 0
 
-    // --- Visual Delights: Tachiai Zoom & Sakura Rain ---
-    const containerRef = useRef<HTMLDivElement>(null)
-    const [zoomLevel, setZoomLevel] = useState(1)
-
-    // Tachiai Zoom Logic
-    useEffect(() => {
-        if (!matchState) {
-            setZoomLevel(1)
-            return
-        }
-        // Zoom in during readiness/countdown to build tension
-        if (matchState.state === STATE_COUNTDOWN || matchState.state === STATE_P1_READY || matchState.state === STATE_P2_READY) {
-            setZoomLevel(1.3)
-        } else {
-            // Snap back for the fight
-            setZoomLevel(1)
-        }
-    }, [matchState?.state])
-
-    // Victory Sakura Rain Logic
-    useEffect(() => {
-        if (showWinner && winnerData) {
-            const duration = 3000
-            const animationEnd = Date.now() + duration
-            const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min
-
-            const interval: NodeJS.Timeout = setInterval(function () {
-                const timeLeft = animationEnd - Date.now()
-
-                if (timeLeft <= 0) {
-                    return clearInterval(interval)
-                }
-
-                const particleCount = 20 * (timeLeft / duration)
-
-                // Sakura Petals (Pink/White Ovals)
-                confetti({
-                    particleCount,
-                    startVelocity: 0,
-                    ticks: 200, // Float longer
-                    origin: { x: Math.random(), y: (Math.random() * 0.2) - 0.2 }, // Fall from top
-                    colors: ['#ffb7b2', '#ffdac1', '#ffffff'],
-                    shapes: ['oval' as any],
-                    scalar: randomInRange(0.8, 1.2),
-                    drift: randomInRange(-0.5, 0.5), // Gentle swaying
-                    gravity: randomInRange(0.4, 0.6)  // Slow fall
-                })
-            }, 250)
-
-            return () => clearInterval(interval)
-        }
-    }, [showWinner, winnerData])
-
     return (
         <div style={{
             minHeight: '100vh',
@@ -736,6 +738,11 @@ export default function WatchPage() {
                     100% { transform: scale(1); } 
                 }
             `}</style>
+
+            {/* Controller Link */}
+            <Link href="/controller" className="absolute top-4 right-4 z-50 text-white/50 hover:text-white hover:scale-110 transition-all pointer-events-auto" title="Open Controller">
+                <Gamepad2 className="w-8 h-8" />
+            </Link>
 
             {/* Stamina Bars */}
             {matchState?.p1 && (

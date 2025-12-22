@@ -74,6 +74,28 @@ function ScrollIcon({ className }: { className?: string }) {
   );
 }
 
+// GBA-Style Eye (Watch/Spectate)
+function EyeIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} shapeRendering="crispEdges">
+      {/* Eye outline */}
+      <rect x="4" y="9" width="16" height="6" fill="#FFD700" />
+      <rect x="6" y="7" width="12" height="2" fill="#FFD700" />
+      <rect x="6" y="15" width="12" height="2" fill="#FFD700" />
+      <rect x="8" y="6" width="8" height="1" fill="#FFD700" />
+      <rect x="8" y="17" width="8" height="1" fill="#FFD700" />
+      {/* Eye white */}
+      <rect x="6" y="9" width="12" height="6" fill="#F5F5DC" />
+      {/* Pupil */}
+      <rect x="10" y="10" width="4" height="4" fill="#1a1428" />
+      {/* Pupil highlight */}
+      <rect x="11" y="11" width="1" height="1" fill="#FFF" />
+      {/* Eyelid shadows */}
+      <rect x="6" y="9" width="12" height="1" fill="#DEB887" />
+    </svg>
+  );
+}
+
 export default function Home() {
   return (
     <main className="flex min-h-[100dvh] flex-col items-center justify-between p-4 max-w-md mx-auto bg-[#1a1428]">
@@ -158,6 +180,25 @@ export default function Home() {
                 </h2>
                 <p className="font-[family-name:var(--font-dotgothic)] text-[10px] text-[#87CEEB]">
                   RANKINGS
+                </p>
+              </div>
+            </div>
+          </div>
+        </Link>
+
+        {/* WATCH VIEW Button */}
+        <Link href="/watch">
+          <div className="gba-menu-btn group">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-[#2a1f3d] border-2 border-[#3d2d5c] flex items-center justify-center shadow-[inset_2px_2px_0_#1a1428]">
+                <EyeIcon className="w-8 h-8" />
+              </div>
+              <div>
+                <h2 className="font-[family-name:var(--font-dotgothic)] text-lg text-[#DC143C] tracking-wide [text-shadow:_1px_1px_0_#000]">
+                  WATCH VIEW
+                </h2>
+                <p className="font-[family-name:var(--font-dotgothic)] text-[10px] text-[#87CEEB]">
+                  SPECTATE MATCH
                 </p>
               </div>
             </div>

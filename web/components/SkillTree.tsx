@@ -291,32 +291,55 @@ export function SkillTree({ wrestlerId, wrestlerName, onClose }: SkillTreeProps)
 
             {/* Scrollable Area */}
             <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-40">
+                {/* TRAINING BENEFITS EXPLANATION */}
+                <div className="bg-[#1a1428] p-4 rounded-xl border border-gray-700/50">
+                    <h3 className="font-[family-name:var(--font-dotgothic)] text-sm text-[var(--gold)] mb-2">Why Train?</h3>
+                    <p className="font-[family-name:var(--font-dotgothic)] text-xs text-gray-400 leading-relaxed">
+                        Unlocking skills passively boosts your wrestler's stats (Strength/Tech/Speed).
+                        <br />
+                        <br />
+                        Additionally, skills have a <span className="text-[var(--jade)]">25% chance</span> to trigger special moves in combat:
+                        <ul className="list-disc ml-4 mt-1 space-y-1">
+                            <li><span className="text-red-400">Strength:</span> Critical Pushes (1.5x - 2.0x Force)</li>
+                            <li><span className="text-blue-400">Technique:</span> Stamina Drain (Tire out opponent)</li>
+                            <li><span className="text-green-400">Speed:</span> Double Strikes</li>
+                        </ul>
+                    </p>
+                </div>
+
                 {Object.entries(skillTree).map(([key, branch]) => {
                     const formatColor = (c: string) => c.includes(',') ? `rgb(${c})` : c;
                     const safeColor = formatColor(branch.color);
 
+                    // Group skills by Tier
+                    const tier1 = branch.skills.filter(s => s.tier === 1);
+                    const tier2 = branch.skills.filter(s => s.tier === 2);
+
                     return (
                         <div key={key} className="bg-[#1e1e24] rounded-xl p-4 border border-gray-700 shadow-md">
-                            {/* Branch Header - Larger and clearer */}
-                            <div className="flex items-center gap-3 mb-4">
+                            {/* Branch Header */}
+                            <div className="flex items-center gap-3 mb-4 border-b border-gray-700 pb-2">
                                 <div
                                     className="w-5 h-5 rounded border-2 border-white/40"
                                     style={{ backgroundColor: safeColor }}
                                 />
-                                <div>
+                                <div className="flex-1">
                                     <h3 className="font-[family-name:var(--font-dotgothic)] text-lg text-white tracking-widest">
                                         {branch.name.toUpperCase()}
                                     </h3>
-                                    <p className="font-[family-name:var(--font-dotgothic)] text-xs text-gray-400 mt-0.5">
-                                        {branch.jp} • {branch.description}
+                                    <p className="font-[family-name:var(--font-dotgothic)] text-xs text-gray-400">
+                                        {branch.description}
                                     </p>
                                 </div>
                             </div>
 
-                            {/* Skill Grid - 3x2 layout for 6 skills */}
-                            < div className="grid grid-cols-3 gap-3 px-1" >
-                                {
-                                    branch.skills.map((skill) => {
+                            {/* TIER 1 ROW */}
+                            <div className="mb-6">
+                                <p className="font-[family-name:var(--font-dotgothic)] text-[10px] text-gray-500 mb-2 uppercase tracking-wide">
+                                    Tier 1 • Novice
+                                </p>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {tier1.map((skill) => {
                                         const lockReason = getLockReason(skill, key);
                                         return (
                                             <SkillNode
@@ -333,11 +356,47 @@ export function SkillTree({ wrestlerId, wrestlerName, onClose }: SkillTreeProps)
                                             />
                                         );
                                     })}
+                                </div>
                             </div>
+
+                            {/* Connector Line (Visual) */}
+                            {tier2.length > 0 && (
+                                <div className="flex justify-center -mt-4 mb-2">
+                                    <div className="w-0.5 h-4 bg-gray-700"></div>
+                                </div>
+                            )}
+
+                            {/* TIER 2 ROW */}
+                            {tier2.length > 0 && (
+                                <div>
+                                    <p className="font-[family-name:var(--font-dotgothic)] text-[10px] text-[var(--gold)]/70 mb-2 uppercase tracking-wide">
+                                        Tier 2 • Master
+                                    </p>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        {tier2.map((skill) => {
+                                            const lockReason = getLockReason(skill, key);
+                                            return (
+                                                <SkillNode
+                                                    key={skill.id}
+                                                    skill={skill}
+                                                    isUnlocked={isSkillUnlocked(skill.id)}
+                                                    canUnlock={canUnlockSkill(skill, key)}
+                                                    onSelect={() => {
+                                                        setSelectedSkill(skill);
+                                                        setSelectedBranch(key);
+                                                    }}
+                                                    branchColor={branch.color}
+                                                    lockReason={lockReason ?? undefined}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     );
                 })}
-            </div >
+            </div>
 
             {/* Skill Detail Panel - More readable */}
             {

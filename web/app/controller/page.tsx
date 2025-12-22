@@ -6,7 +6,7 @@ import { WRESTLER_POLL_INTERVAL_MS, STATUS_POLL_INTERVAL_MS, AVATAR_SIZE_CONTROL
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { PixelSumo } from "@/components/PixelSumo";
-import { ArrowLeft, Gamepad2, RotateCcw } from "lucide-react";
+import { ArrowLeft, Gamepad2, RotateCcw, Eye } from "lucide-react";
 
 export default function ControllerPage() {
     const [wrestlers, setWrestlers] = useState<Wrestler[]>([]);
@@ -15,6 +15,12 @@ export default function ControllerPage() {
     const [loading, setLoading] = useState(false);
     const [buttonText, setButtonText] = useState<ButtonTextValue>(BUTTON_TEXT.TACHIAI);
     const [soloMode, setSoloMode] = useState(false); // Solo mode: control both wrestlers from one device
+    const [twoPlayerMode, setTwoPlayerMode] = useState(false);
+
+    // Sync Mode State
+    const [syncMode, setSyncMode] = useState(false);
+    const [mySide, setMySide] = useState<'p1' | 'p2' | null>(null);
+    const [lobbyStatus, setLobbyStatus] = useState<any>(null);
 
     const fetchWrestlers = useCallback(() => {
         api.getWrestlers().then(data => {
@@ -31,6 +37,29 @@ export default function ControllerPage() {
         const pollInterval = setInterval(fetchWrestlers, WRESTLER_POLL_INTERVAL_MS);
         return () => clearInterval(pollInterval);
     }, [fetchWrestlers]);
+
+    // Sync Mode Polling
+    useEffect(() => {
+        if (!syncMode) return;
+
+        const pollLobby = async () => {
+            try {
+                const status = await api.getLobbyStatus();
+                setLobbyStatus(status);
+
+                // Auto-update opponent ID if joined
+                if (status.p1 && status.p1.id && mySide === 'p2') setP1(status.p1.id);
+                if (status.p2 && status.p2.id && mySide === 'p1') setP2(status.p2.id);
+
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        pollLobby();
+        const interval = setInterval(pollLobby, 1000);
+        return () => clearInterval(interval);
+    }, [syncMode, mySide]);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -80,10 +109,240 @@ export default function ControllerPage() {
     const w1 = getWrestler(p1);
     const w2 = getWrestler(p2);
 
-    const handlePush = (wId: string, dir: 'push_left' | 'push_right') => {
+    const handlePush = (wId: string) => {
         triggerHaptic(50); // Sharp tap for interactions
-        api.fightAction(wId, dir);
+        api.fightAction(wId, 'push');
     };
+
+    // --- 2P MODE RENDER ---
+    if (twoPlayerMode) {
+        return (
+            <div className="h-[100dvh] w-full bg-[#1a1428] overflow-hidden flex flex-row relative">
+                {/* Global Settings (Top Center Overlay) */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 z-50 flex gap-2 p-2 pointer-events-auto opacity-50 hover:opacity-100 transition-opacity">
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        className="h-6 text-[10px] font-[family-name:var(--font-dotgothic)] border border-white/20"
+                        onClick={() => {
+                            triggerHaptic(20);
+                            setTwoPlayerMode(false);
+                        }}
+                    >
+                        EXIT 2P
+                    </Button>
+                    <button
+                        onClick={async () => {
+                            if (window.confirm('Reset match?')) {
+                                try {
+                                    await api.resetMatch();
+                                    setButtonText(BUTTON_TEXT.TACHIAI);
+                                    setLoading(false);
+                                } catch { }
+                            }
+                        }}
+                        className="h-6 w-6 bg-red-900/50 flex items-center justify-center rounded border border-white/20 text-white"
+                    >
+                        <RotateCcw className="h-3 w-3" />
+                    </button>
+                </div>
+
+                {/* FIGHT BUTTON OVERLAY (Centered) */}
+                {buttonText === BUTTON_TEXT.TACHIAI || buttonText === BUTTON_TEXT.HAKKEYOI ? (
+                    <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-[2px] pointer-events-none">
+                        <div className="pointer-events-auto">
+                            <Button
+                                onClick={handleFight}
+                                disabled={loading || !p1 || !p2}
+                                className="w-48 h-24 text-2xl font-[family-name:var(--font-dotgothic)] tracking-widest bg-gradient-to-b from-[#FFD700] to-[#DAA520] text-black border-4 border-white shadow-2xl animate-pulse"
+                            >
+                                {buttonText}
+                            </Button>
+                        </div>
+                    </div>
+                ) : null}
+
+                {/* LEFT PLAYER (P1 - WEST) */}
+                <div className="flex-1 border-r-2 border-[#3d2d5c] flex flex-col relative">
+                    <div className="absolute top-2 left-2 z-10 w-32">
+                        <select
+                            value={p1}
+                            onChange={(e) => setP1(e.target.value)}
+                            className="w-full bg-[#2a1f3d]/90 text-white text-xs p-1 border border-[#3d2d5c] font-[family-name:var(--font-dotgothic)]"
+                        >
+                            {wrestlers.map(w => <option key={w.id} value={w.id}>{w.custom_name || w.name}</option>)}
+                        </select>
+                    </div>
+
+                    {/* Big Touch Area for P1 - SINGLE PUSH */}
+                    <div
+                        className="flex-1 bg-gradient-to-br from-[#1a1428] to-[#2a1f3d] flex items-center justify-center active:bg-[#50C878]/20 transition-colors relative"
+                        onTouchStart={() => { if (w1 && buttonText === BUTTON_TEXT.NOKOTTA) { handlePush(w1.id); } }}
+                        onClick={() => w1 && buttonText === BUTTON_TEXT.NOKOTTA && handlePush(w1.id)}
+                    >
+                        <span className="text-4xl text-white/20 font-[family-name:var(--font-dotgothic)] select-none pointer-events-none tracking-widest">PUSH</span>
+                        {/* Stats Overlay */}
+                        {w1 && <div className="absolute bottom-2 left-2 text-[10px] text-white/30 font-[family-name:var(--font-dotgothic)]">STR:{w1.strength}</div>}
+                    </div>
+                </div>
+
+                {/* RIGHT PLAYER (P2 - EAST) */}
+                <div className="flex-1 flex flex-col relative">
+                    <div className="absolute top-2 right-2 z-10 w-32">
+                        <select
+                            value={p2}
+                            onChange={(e) => setP2(e.target.value)}
+                            className="w-full bg-[#2a1f3d]/90 text-white text-xs p-1 border border-[#3d2d5c] font-[family-name:var(--font-dotgothic)] text-right"
+                        >
+                            {wrestlers.map(w => <option key={w.id} value={w.id}>{w.custom_name || w.name}</option>)}
+                        </select>
+                    </div>
+
+                    {/* Big Touch Area for P2 - SINGLE PUSH */}
+                    <div
+                        className="flex-1 bg-gradient-to-bl from-[#1a1428] to-[#2a1f3d] flex items-center justify-center active:bg-[#DC143C]/20 transition-colors relative"
+                        onTouchStart={() => { if (w2 && buttonText === BUTTON_TEXT.NOKOTTA) { handlePush(w2.id); } }}
+                        onClick={() => w2 && buttonText === BUTTON_TEXT.NOKOTTA && handlePush(w2.id)}
+                    >
+                        <span className="text-4xl text-white/20 font-[family-name:var(--font-dotgothic)] select-none pointer-events-none tracking-widest">PUSH</span>
+                        {/* Stats Overlay */}
+                        {w2 && <div className="absolute bottom-2 right-2 text-[10px] text-white/30 font-[family-name:var(--font-dotgothic)]">STR:{w2.strength}</div>}
+                    </div>
+                </div>
+            </div>
+
+        )
+    }
+
+    // --- SYNC MODE (REMOTE PLAY) ---
+    if (syncMode) {
+        // 1. SELECT SIDE SCREEN
+        if (!mySide) {
+            return (
+                <div className="h-[100dvh] w-full bg-[#1a1428] flex flex-col p-4">
+                    <Button onClick={() => setSyncMode(false)} variant="secondary" className="self-start mb-8">EXIT SYNC</Button>
+                    <h2 className="text-xl text-[var(--gold)] font-[family-name:var(--font-dotgothic)] text-center mb-8">CHOOSE SIDE</h2>
+
+                    <div className="flex-1 flex flex-col gap-4">
+                        <button
+                            disabled={!!lobbyStatus?.p1}
+                            onClick={() => setMySide('p1')}
+                            className={`flex-1 border-4 border-red-500/50 rounded-xl flex items-center justify-center relative overflow-hidden active:scale-95 transition-all
+                                ${lobbyStatus?.p1 ? 'opacity-30 grayscale' : 'hover:bg-red-900/20'}`}
+                        >
+                            <span className="text-2xl text-red-400 font-[family-name:var(--font-dotgothic)]">WEST (P1)</span>
+                            {lobbyStatus?.p1 && <span className="absolute bottom-4 text-xs text-white">TAKEN</span>}
+                        </button>
+
+                        <button
+                            disabled={!!lobbyStatus?.p2}
+                            onClick={() => setMySide('p2')}
+                            className={`flex-1 border-4 border-blue-500/50 rounded-xl flex items-center justify-center relative overflow-hidden active:scale-95 transition-all
+                                ${lobbyStatus?.p2 ? 'opacity-30 grayscale' : 'hover:bg-blue-900/20'}`}
+                        >
+                            <span className="text-2xl text-blue-400 font-[family-name:var(--font-dotgothic)]">EAST (P2)</span>
+                            {lobbyStatus?.p2 && <span className="absolute bottom-4 text-xs text-white">TAKEN</span>}
+                        </button>
+                        <div className="mt-4 flex justify-center">
+                            <button
+                                onClick={async () => { await api.resetLobby(); alert('Lobby Reset!'); }}
+                                className="text-xs text-gray-500 underline"
+                            >
+                                Reset Lobby State
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // 2. LOBBY / FIGHTING SCREEN for SYNC
+        // If match starts (BUTTON_TEXT not TACHIAI), showing normal fight UI but customized
+        const isFighting = buttonText === BUTTON_TEXT.NOKOTTA || buttonText === BUTTON_TEXT.HAKKEYOI;
+
+        return (
+            <div className="h-[100dvh] w-full bg-[#1a1428] flex flex-col p-4 relative overflow-hidden">
+                {!isFighting && (
+                    <div className="absolute top-2 left-2 z-50">
+                        <Button size="sm" variant="ghost" onClick={() => { setMySide(null); setSyncMode(false); }} className="text-xs text-gray-400">EXIT</Button>
+                    </div>
+                )}
+
+                {/* STATUS BAR */}
+                <div className="bg-black/50 p-2 text-center rounded mb-4 mt-8 backdrop-blur-sm border border-white/10">
+                    <p className="text-[10px] text-gray-400 font-[family-name:var(--font-dotgothic)]">
+                        LOBBY STATUS
+                    </p>
+                    <div className="flex justify-between items-center px-4 mt-1">
+                        <div className={`text-xs ${lobbyStatus?.p1 ? 'text-green-400' : 'text-gray-600'}`}>P1: {lobbyStatus?.p1 ? 'READY' : '...'}</div>
+                        <div className={`text-xs ${lobbyStatus?.p2 ? 'text-green-400' : 'text-gray-600'}`}>P2: {lobbyStatus?.p2 ? 'READY' : '...'}</div>
+                    </div>
+                </div>
+
+                {/* FIGHTER SELECTION (Only show if not fighting) */}
+                {!isFighting && (
+                    <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                        <h3 className="text-[var(--gold)] font-[family-name:var(--font-dotgothic)]">SELECT YOUR FIGHTER</h3>
+                        <select
+                            value={mySide === 'p1' ? p1 : p2}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (mySide === 'p1') setP1(val); else setP2(val);
+                                // Join Lobby
+                                const w = wrestlers.find(w => w.id.toString() === val);
+                                if (w) api.joinLobby(mySide, val, w.name);
+                            }}
+                            className="bg-[#2a1f3d] text-white p-3 rounded border border-[var(--gold)] w-full max-w-xs font-[family-name:var(--font-dotgothic)] text-lg"
+                        >
+                            {wrestlers.map(w => <option key={w.id} value={w.id}>{(w.custom_name || w.name).toUpperCase()}</option>)}
+                        </select>
+
+                        <div className="py-4">
+                            {mySide === 'p1' && w1 && <PixelSumo seed={w1.avatar_seed} color={w1.color} size={100} />}
+                            {mySide === 'p2' && w2 && <PixelSumo seed={w2.avatar_seed} color={w2.color} size={100} />}
+                        </div>
+
+                        {/* START BUTTON (If both ready) */}
+                        <Button
+                            disabled={!lobbyStatus?.ready_to_start}
+                            onClick={() => api.startLobbyMatch()}
+                            className="w-full h-16 text-xl tracking-widest bg-[var(--jade)] hover:bg-[#00a86b] disabled:opacity-30 disabled:grayscale transition-all font-[family-name:var(--font-dotgothic)]"
+                        >
+                            {lobbyStatus?.ready_to_start ? "START MATCH" : "WAITING FOR OPPONENT..."}
+                        </Button>
+                    </div>
+                )}
+
+                {/* FIGHT BUTTON (Big Overlay when fighting) */}
+                {isFighting && (
+                    <div className="absolute inset-0 z-40 bg-[#1a1428] flex flex-col">
+                        <div className="flex-1 flex items-center justify-center relative">
+                            {/* Single huge button for my side */}
+                            <button
+                                onTouchStart={() => {
+                                    const id = mySide === 'p1' ? p1 : p2;
+                                    if (id) handlePush(id);
+                                }}
+                                onClick={() => {
+                                    const id = mySide === 'p1' ? p1 : p2;
+                                    if (id) handlePush(id);
+                                }}
+                                className="w-full h-full flex flex-col items-center justify-center active:scale-95 transition-transform"
+                                style={{ backgroundColor: mySide === 'p1' ? '#3d2d5c' : '#2d1f1f' }} // purple vs red-ish dark
+                            >
+                                <span className="text-6xl text-white/20 font-[family-name:var(--font-dotgothic)] select-none pointer-events-none tracking-widest animate-pulse">
+                                    PUSH!
+                                </span>
+                                <span className="mt-4 text-sm text-white/40 font-[family-name:var(--font-dotgothic)]">
+                                    {buttonText}
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     return (
         <div className="h-[100dvh] p-3 flex flex-col max-w-md mx-auto bg-[#1a1428] overflow-hidden">
@@ -99,6 +358,26 @@ export default function ControllerPage() {
                 </Link>
                 <h1 className="font-[family-name:var(--font-dotgothic)] text-lg text-[#FFD700] [text-shadow:_1px_1px_0_#000] flex-1">TACHIAI</h1>
 
+                {/* 1P/2P Toggle */}
+                <button
+                    onClick={() => { triggerHaptic(20); setTwoPlayerMode(true); }}
+                    className="flex items-center gap-1 px-2 py-1 rounded border border-[#3d2d5c] bg-[#2a1f3d] text-xs font-[family-name:var(--font-dotgothic)] text-gray-300 hover:text-[#FFD700]"
+                >
+                    <Gamepad2 className="h-3 w-3" />
+                    <span>2P MODE</span>
+                </button>
+
+                {/* Watch View Link */}
+                <Link href="/watch">
+                    <button
+                        className="flex items-center gap-1 px-2 py-1 rounded border border-[#3d2d5c] bg-[#2a1f3d] text-xs font-[family-name:var(--font-dotgothic)] text-gray-300 hover:text-[#DC143C]"
+                        title="Watch Match"
+                    >
+                        <Eye className="h-3 w-3" />
+                        <span>WATCH</span>
+                    </button>
+                </Link>
+
                 {/* Solo Mode Toggle */}
                 <button
                     onClick={() => {
@@ -112,6 +391,19 @@ export default function ControllerPage() {
                 >
                     <Gamepad2 className="h-3 w-3" />
                     <span>{soloMode ? "SOLO ACTIVE" : "SOLO OFF"}</span>
+                </button>
+
+                {/* Sync Mode Toggle */}
+                <button
+                    onClick={() => {
+                        triggerHaptic(20);
+                        setSyncMode(true);
+                        setTwoPlayerMode(false);
+                    }}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded border-2 text-[10px] font-[family-name:var(--font-dotgothic)] bg-[#2a1f3d] text-[#87CEEB] border-[#3d2d5c] hover:border-[#87CEEB]"
+                >
+                    <RotateCcw className="h-3 w-3" />
+                    <span>SYNC</span>
                 </button>
 
                 {/* Reset Match Button */}
@@ -141,7 +433,6 @@ export default function ControllerPage() {
             <div className="flex-1 flex flex-col justify-center gap-6 min-h-0">
                 {/* P1 - WEST Fighter (Top) */}
                 <div className="gba-menu-btn p-3 relative">
-                    <div className="absolute top-1 right-2 text-2xl text-[#50C878] opacity-40 font-[family-name:var(--font-dotgothic)]">西</div>
                     <p className="text-[10px] text-[#87CEEB] font-[family-name:var(--font-dotgothic)] mb-1">WEST</p>
                     <select
                         value={p1}
@@ -156,26 +447,15 @@ export default function ControllerPage() {
                     </select>
                     {w1 && (
                         <div className="mt-2 flex gap-3 items-center relative">
-                            {/* DIRECTIONAL CONTROLS - Shows during fight (NOKOTTA state) */}
+                            {/* SINGLE PUSH BUTTON - Shows during fight (NOKOTTA state) */}
                             {buttonText === BUTTON_TEXT.NOKOTTA && (
-                                <div className="absolute inset-0 z-10 flex gap-2 p-1">
-                                    {/* LEFT PUSH BUTTON */}
+                                <div className="absolute inset-0 z-10 flex p-1">
                                     <button
-                                        onClick={() => handlePush(w1.id, 'push_left')}
+                                        onClick={() => handlePush(w1.id)}
                                         style={{ backgroundColor: `rgb(${w1.color})` }}
-                                        className="flex-1 text-white font-[family-name:var(--font-dotgothic)] text-xl border-4 border-l-yellow-300 border-t-yellow-300 border-r-yellow-600 border-b-yellow-600 flex flex-col items-center justify-center shadow-lg active:brightness-75 active:scale-95 transition-all"
+                                        className="flex-1 text-white font-[family-name:var(--font-dotgothic)] text-2xl border-4 border-l-yellow-300 border-t-yellow-300 border-r-yellow-600 border-b-yellow-600 flex items-center justify-center shadow-lg active:brightness-75 active:scale-95 transition-all tracking-widest"
                                     >
-                                        <span className="text-2xl">◄</span>
-                                        <span className="text-[10px]">LEFT</span>
-                                    </button>
-                                    {/* RIGHT PUSH BUTTON */}
-                                    <button
-                                        onClick={() => handlePush(w1.id, 'push_right')}
-                                        style={{ backgroundColor: `rgb(${w1.color})` }}
-                                        className="flex-1 text-white font-[family-name:var(--font-dotgothic)] text-xl border-4 border-l-yellow-300 border-t-yellow-300 border-r-yellow-600 border-b-yellow-600 flex flex-col items-center justify-center shadow-lg active:brightness-75 active:scale-95 transition-all"
-                                    >
-                                        <span className="text-2xl">►</span>
-                                        <span className="text-[10px]">RIGHT</span>
+                                        PUSH
                                     </button>
                                     {soloMode && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 text-[8px] text-white/70 font-[family-name:var(--font-dotgothic)]">WEST</span>}
                                 </div>
@@ -209,7 +489,6 @@ export default function ControllerPage() {
 
                 {/* P2 - EAST Fighter (Bottom) */}
                 <div className="gba-menu-btn p-3 relative">
-                    <div className="absolute top-1 right-2 text-2xl text-[#DC143C] opacity-40 font-[family-name:var(--font-dotgothic)]">東</div>
                     <p className="text-[10px] text-[#87CEEB] font-[family-name:var(--font-dotgothic)] mb-1">EAST</p>
                     <select
                         value={p2}
@@ -224,26 +503,15 @@ export default function ControllerPage() {
                     </select>
                     {w2 && (
                         <div className="mt-2 flex gap-3 items-center relative">
-                            {/* DIRECTIONAL CONTROLS - Shows during fight (NOKOTTA state) */}
+                            {/* SINGLE PUSH BUTTON - Shows during fight (NOKOTTA state) */}
                             {buttonText === BUTTON_TEXT.NOKOTTA && (
-                                <div className="absolute inset-0 z-10 flex gap-2 p-1">
-                                    {/* LEFT PUSH BUTTON */}
+                                <div className="absolute inset-0 z-10 flex p-1">
                                     <button
-                                        onClick={() => handlePush(w2.id, 'push_left')}
+                                        onClick={() => handlePush(w2.id)}
                                         style={{ backgroundColor: `rgb(${w2.color})` }}
-                                        className="flex-1 text-white font-[family-name:var(--font-dotgothic)] text-xl border-4 border-l-yellow-300 border-t-yellow-300 border-r-yellow-600 border-b-yellow-600 flex flex-col items-center justify-center shadow-lg active:brightness-75 active:scale-95 transition-all"
+                                        className="flex-1 text-white font-[family-name:var(--font-dotgothic)] text-2xl border-4 border-l-yellow-300 border-t-yellow-300 border-r-yellow-600 border-b-yellow-600 flex items-center justify-center shadow-lg active:brightness-75 active:scale-95 transition-all tracking-widest"
                                     >
-                                        <span className="text-2xl">◄</span>
-                                        <span className="text-[10px]">LEFT</span>
-                                    </button>
-                                    {/* RIGHT PUSH BUTTON */}
-                                    <button
-                                        onClick={() => handlePush(w2.id, 'push_right')}
-                                        style={{ backgroundColor: `rgb(${w2.color})` }}
-                                        className="flex-1 text-white font-[family-name:var(--font-dotgothic)] text-xl border-4 border-l-yellow-300 border-t-yellow-300 border-r-yellow-600 border-b-yellow-600 flex flex-col items-center justify-center shadow-lg active:brightness-75 active:scale-95 transition-all"
-                                    >
-                                        <span className="text-2xl">►</span>
-                                        <span className="text-[10px]">RIGHT</span>
+                                        PUSH
                                     </button>
                                     {soloMode && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 text-[8px] text-white/70 font-[family-name:var(--font-dotgothic)]">EAST</span>}
                                 </div>

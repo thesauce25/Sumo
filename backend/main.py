@@ -169,14 +169,21 @@ class MatchManager:
         while not engine.game_over:
             start_time = asyncio.get_event_loop().time()
             
-            # Tick Physics
-            state = engine.tick(1/60.0)
-            
-            # Update activity timestamp
-            self.match_timestamps[match_id] = time.time()
-            
-            # Broadcast State
-            await self.broadcast(match_id, state)
+            try:
+                # Tick Physics
+                state = engine.tick(1/60.0)
+                
+                # Update activity timestamp
+                self.match_timestamps[match_id] = time.time()
+                
+                # Broadcast State
+                await self.broadcast(match_id, state)
+            except Exception as e:
+                print(f"[MatchManager] Error in game tick: {e}")
+                import traceback
+                traceback.print_exc()
+                # Optionally end match on critical error? 
+                # For now, just continue and hope it recovers or next tick works
             
             # Sleep to maintain frame rate
             elapsed = asyncio.get_event_loop().time() - start_time
@@ -218,6 +225,10 @@ class MatchManager:
                  traceback.print_exc()
                  print(f"[MatchManager] Failed to save match result: {e}")
         
+        # Short grace period for clients to receive Game Over before cleanup
+        print(f"[MatchManager] Match {match_id} ended. Waiting 15s grace period...")
+        await asyncio.sleep(15.0)
+        
         # Cleanup - always runs even if Firestore save fails
         if match_id in self.matches:
             print(f"[MatchManager] cleanup: Removing match {match_id} from memory")
@@ -226,7 +237,42 @@ class MatchManager:
             del self.match_timestamps[match_id]
         print(f"[MatchManager] Match {match_id} cleaned up successfully")
 
+        if match_id in self.match_timestamps:
+            del self.match_timestamps[match_id]
+        print(f"[MatchManager] Match {match_id} cleaned up successfully")
+
 manager = MatchManager()
+
+class LobbyManager:
+    """Simple in-memory lobby for 2-player setup"""
+    def __init__(self):
+        self.reset()
+        
+    def reset(self):
+        self.p1 = None  # {id, name, ready}
+        self.p2 = None
+        self.locked = False
+        
+    def get_status(self):
+        return {
+            "p1": self.p1,
+            "p2": self.p2,
+            "ready_to_start": (self.p1 is not None and self.p2 is not None),
+            "locked": self.locked
+        }
+
+    def join(self, side: str, wrestler_id: str, wrestler_name: str):
+        if self.locked:
+            return False
+            
+        data = {"id": wrestler_id, "name": wrestler_name}
+        if side == "p1":
+            self.p1 = data
+        elif side == "p2":
+            self.p2 = data
+        return True
+
+lobby_manager = LobbyManager()
 
 
 # --- Wrestler Stats Update Function ---
@@ -682,12 +728,53 @@ async def start_simulation():
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
         
-    return {
-        "status": "simulation_started",
-        "match_id": match_id,
-        "mode": "auto_bot_battle",
         "watch_url": f"/watch"
     }
+
+# --- Lobby Endpoints (Remote 2P) ---
+
+@app.get("/api/lobby/status")
+async def get_lobby_status():
+    return lobby_manager.get_status()
+
+class JoinLobbyRequest(BaseModel):
+    side: str # "p1" or "p2"
+    wrestler_id: str
+    wrestler_name: str
+
+@app.post("/api/lobby/join")
+async def join_lobby(req: JoinLobbyRequest):
+    if req.side not in ["p1", "p2"]:
+        raise HTTPException(status_code=400, detail="Invalid side")
+        
+    success = lobby_manager.join(req.side, req.wrestler_id, req.wrestler_name)
+    if not success:
+        raise HTTPException(status_code=400, detail="Lobby is locked or unavailable")
+    return {"success": True, "status": lobby_manager.get_status()}
+
+@app.post("/api/lobby/reset")
+async def reset_lobby():
+    lobby_manager.reset()
+    return {"success": True}
+
+@app.post("/api/lobby/start")
+async def start_lobby_match():
+    status = lobby_manager.get_status()
+    if not status["ready_to_start"]:
+        raise HTTPException(status_code=400, detail="Not all players ready")
+        
+    # Start match!
+    p1_id = status["p1"]["id"]
+    p2_id = status["p2"]["id"]
+    
+    # Create simple match ID
+    match_id = f"m-{int(time.time())}"
+    await manager.create_match(match_id, p1_id, p2_id)
+    
+    # Lock lobby so others don't overwrite
+    lobby_manager.locked = True
+    
+    return {"success": True, "match_id": match_id}
 
 # --- Demo Simulation for Watch Page ---
 # Persistent demo engine for background simulation on watch page

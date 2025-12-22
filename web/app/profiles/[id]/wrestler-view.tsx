@@ -173,8 +173,8 @@ export default function WrestlerView({ id }: { id: string }) {
                                     </div>
                                     <div className="flex-1 text-xs font-[family-name:var(--font-dotgothic)] text-muted-foreground truncate">
                                         vs {match.p1_name === wrestler.name || match.p1_custom === wrestler.custom_name
-                                            ? (match.p2_custom || match.p2_name).toUpperCase()
-                                            : (match.p1_custom || match.p1_name).toUpperCase()
+                                            ? (match.p2_custom || match.p2_name || 'Unknown').toUpperCase()
+                                            : (match.p1_custom || match.p1_name || 'Unknown').toUpperCase()
                                         }
                                     </div>
                                 </Card>

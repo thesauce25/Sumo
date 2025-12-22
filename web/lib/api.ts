@@ -56,14 +56,18 @@ export interface WrestlerSkillsResponse {
 }
 
 export interface MatchRecord {
-    id: number;
+    id: string; // Changed from number to string as backend uses string IDs
+    p1_id: string;
     p1_name: string;
     p1_custom?: string;
+    p2_id: string;
     p2_name: string;
     p2_custom?: string;
+    winner_id: string;
     winner_name: string;
     winner_custom?: string;
-    timestamp: string;
+    loser_id?: string;
+    timestamp: any; // Firestore timestamp
 }
 
 export const api = {
@@ -106,8 +110,11 @@ export const api = {
         return res.json();
     },
 
-    getHistory: async (wrestlerId?: string): Promise<MatchRecord[]> => {
-        const url = wrestlerId ? `${getApiUrl()}/history?wrestler_id=${wrestlerId}` : `${getApiUrl()}/history`;
+    getHistory: async (wrestlerId?: string, limit: number = 10): Promise<MatchRecord[]> => {
+        let url = `${getApiUrl()}/history?limit=${limit}`;
+        if (wrestlerId) {
+            url += `&wrestler_id=${wrestlerId}`;
+        }
         const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to fetch history');
         return res.json();
@@ -138,7 +145,7 @@ export const api = {
         return res.json();
     },
 
-    fightAction: async (wrestlerId: string | number, action: 'kiai' | 'push_left' | 'push_right') => {
+    fightAction: async (wrestlerId: string | number, action: 'kiai' | 'push' | 'push_left' | 'push_right') => {
         const res = await fetch(`${getApiUrl()}/fight/action`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -154,6 +161,41 @@ export const api = {
             headers: { 'Content-Type': 'application/json' }
         });
         if (!res.ok) throw new Error('Failed to reset match');
+        return res.json();
+    },
+
+    // --- Remote Lobby API ---
+    getLobbyStatus: async () => {
+        const res = await fetch(`${getApiUrl()}/lobby/status`, { cache: 'no-store' });
+        if (!res.ok) throw new Error('Failed to fetch lobby status');
+        return res.json();
+    },
+
+    joinLobby: async (side: 'p1' | 'p2', wrestlerId: string, wrestlerName: string) => {
+        const res = await fetch(`${getApiUrl()}/lobby/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ side, wrestler_id: wrestlerId, wrestler_name: wrestlerName })
+        });
+        if (!res.ok) throw new Error('Failed to join lobby');
+        return res.json();
+    },
+
+    startLobbyMatch: async () => {
+        const res = await fetch(`${getApiUrl()}/lobby/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (!res.ok) throw new Error('Failed to start lobby match');
+        return res.json();
+    },
+
+    resetLobby: async () => {
+        const res = await fetch(`${getApiUrl()}/lobby/reset`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (!res.ok) throw new Error('Failed to reset lobby');
         return res.json();
     }
 };
